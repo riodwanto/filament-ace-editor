@@ -2,14 +2,18 @@
 
 
 return [
+    // Path source
     'base_url' => 'https://cdnjs.cloudflare.com/ajax/libs/ace/1.32.7',
 
+    // Main file (commonly ace.js)
     'file' => 'ace.js',
 
+    // Default config
     'editor_config' => [
         'useWorker' => false
     ],
 
+    // Default options
     'editor_options' => [
         'mode' => 'ace/mode/php',
         'theme' => 'ace/theme/eclipse',
@@ -23,17 +27,20 @@ return [
         'wrap' => 'free'
     ],
 
+    // Dark mode config
     'dark_mode' => [
         'enable' => true,
         'theme' => 'ace/theme/dracula',
     ],
 
+    // Enabled extension
     'enabled_extensions' => [
         'beautify',
         'language_tools',
         'inline_autocomplete',
     ],
 
+    // Extension source
     'extensions' => [
         'beautify' => 'https://cdnjs.cloudflare.com/ajax/libs/ace/1.32.7/ext-beautify.min.js',
         'code_lens' => 'https://cdnjs.cloudflare.com/ajax/libs/ace/1.32.7/ext-code_lens.min.js',
