@@ -1,0 +1,18 @@
+@import '../../vendor/filament/filament/resources/css/theme.css';
+
+.ace-editor-wrapper {
+    @apply relative rounded-md shadow-sm ring-1 focus-within:!ring-2 focus-within:!ring-primary-600;
+}
+
+.ace-editor-wrapper.base {
+    @apply ring-gray-950/10 dark:ring-white/20;
+}
+
+.ace-editor-wrapper.danger {
+    @apply ring-danger-600 dark:ring-danger-600;
+}
+
+.ace-editor {
+    @apply w-full h-full rounded-md;
+}
+

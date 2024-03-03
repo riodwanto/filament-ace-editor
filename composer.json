@@ -1,0 +1,74 @@
+{
+    "name": "riodwanto/filament-ace-editor",
+    "description": "Ace Editor implementation for Filament Forms",
+    "keywords": [
+        "filament",
+        "filament-form-field",
+        "filament-field",
+        "filament-ace-editor",
+        "code-editor",
+        "laravel",
+        "riodwanto"
+    ],
+    "homepage": "https://github.com/riodwanto/filament-ace-editor",
+    "support": {
+        "issues": "https://github.com/riodwanto/filament-ace-editor/issues",
+        "source": "https://github.com/riodwanto/filament-ace-editor"
+    },
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "Rio Dewanto P",
+            "email": "rdp.tech@gmail.com",
+            "role": "Developer"
+        }
+    ],
+    "require": {
+        "php": "^8.1",
+        "spatie/laravel-package-tools": "^1.15.0",
+        "illuminate/contracts": "^10.0"
+    },
+    "require-dev": {
+        "filament/filament": "^3.0",
+        "nunomaduro/collision": "^7.9",
+        "orchestra/testbench": "^8.0",
+        "pestphp/pest": "^2.0",
+        "pestphp/pest-plugin-arch": "^2.0",
+        "pestphp/pest-plugin-laravel": "^2.0"
+    },
+    "autoload": {
+        "psr-4": {
+            "Riodwanto\\FilamentAceEditor\\": "src/",
+            "Riodwanto\\FilamentAceEditor\\Database\\Factories\\": "database/factories/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Riodwanto\\FilamentAceEditor\\Tests\\": "tests/"
+        }
+    },
+    "scripts": {
+        "post-autoload-dump": "@php ./vendor/bin/testbench package:discover --ansi",
+        "test": "vendor/bin/pest",
+        "test-coverage": "vendor/bin/pest --coverage"
+    },
+    "config": {
+        "sort-packages": true,
+        "allow-plugins": {
+            "pestphp/pest-plugin": true,
+            "phpstan/extension-installer": true
+        }
+    },
+    "extra": {
+        "laravel": {
+            "providers": [
+                "Riodwanto\\FilamentAceEditor\\FilamentAceEditorServiceProvider"
+            ],
+            "aliases": {
+                "FilamentAceEditor": "Riodwanto\\FilamentAceEditor\\Facades\\FilamentAceEditor"
+            }
+        }
+    },
+    "minimum-stability": "dev",
+    "prefer-stable": true
+}
