@@ -58,7 +58,7 @@ export default function aceEditorComponent({
         initializeEditor() {
             this.editor = ace.edit(this.$refs.aceCodeEditor);
             this.editor.setOptions(this.options);
-            this.editor.setValue(!this.state ? this.placeholder : this.state);
+            this.editor.session.setValue(!this.state ? this.placeholder : this.state);
 
             this.editor.session.on('change', () => {
                 this.state = this.editor.getValue();
