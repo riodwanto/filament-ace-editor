@@ -33,8 +33,8 @@
         <div
             wire:ignore
             x-ignore
-            ax-load
-            ax-load-src="{{ \Filament\Support\Facades\FilamentAsset::getAlpineComponentSrc('filament-ace-editor', 'riodwanto/filament-ace-editor') }}"
+            x-load
+            x-load-src="{{ \Filament\Support\Facades\FilamentAsset::getAlpineComponentSrc('filament-ace-editor', 'riodwanto/filament-ace-editor') }}"
             x-data="aceEditorComponent({
                 state: $wire.{{ $applyStateBindingModifiers("entangle('{$statePath}')", isOptimisticallyLive: false) }},
                 statePath: '{{ $statePath }}',

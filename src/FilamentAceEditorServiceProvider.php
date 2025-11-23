@@ -41,18 +41,17 @@ class FilamentAceEditorServiceProvider extends PackageServiceProvider
         // Asset Registration
         FilamentAsset::register(
             $this->getAssets(),
-            $this->getAssetPackageName()
+            package: 'riodwanto/filament-ace-editor'
         );
 
         FilamentAsset::registerScriptData(
             $this->getScriptData(),
-            $this->getAssetPackageName()
+            package: 'riodwanto/filament-ace-editor'
         );
 
         // Icon Registration
         FilamentIcon::register($this->getIcons());
 
-        // Handle Stubs
         if (app()->runningInConsole()) {
             foreach (app(Filesystem::class)->files(__DIR__ . '/../stubs/') as $file) {
                 $this->publishes([
@@ -61,7 +60,6 @@ class FilamentAceEditorServiceProvider extends PackageServiceProvider
             }
         }
 
-        // Testing
         Testable::mixin(new TestsFilamentAceEditor());
     }
 
@@ -70,9 +68,6 @@ class FilamentAceEditorServiceProvider extends PackageServiceProvider
         return 'riodwanto/filament-ace-editor';
     }
 
-    /**
-     * @return array<Asset>
-     */
     protected function getAssets(): array
     {
         return [
