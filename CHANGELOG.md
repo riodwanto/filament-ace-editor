@@ -2,6 +2,18 @@
 
 All notable changes to `filament-ace-editor` will be documented in this file.
 
+## [4.0.1] - 2025-11-23
+
+### Fixed
+
+- **Critical:** Resolve `[object Object]` display issue when editor receives complex data structures
+- Replace manual interceptor object handling with proper Filament 4 state management patterns
+- Fix `$applyStateBindingModifiers()` usage with escaped `\$entangle()` in Blade template
+- Implement proper state synchronization following RichEditor/MarkdownEditor patterns
+- Remove custom state hydration logic that interfered with framework state management
+- Add focus detection to prevent content updates during user editing
+- Prevent infinite loops with proper `shouldUpdateState` flag implementation
+
 ## [4.0.0] - 2025-11-23
 
 ### Changed
