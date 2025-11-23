@@ -20,6 +20,8 @@ export default function aceEditorComponent({
         disableDarkTheme,
         editor: null,
         observer: null,
+        shouldUpdateState: true,
+        isDestroyed: false,
 
         init() {
             this.initializeEditor();
@@ -31,7 +33,7 @@ export default function aceEditorComponent({
                 await this.loadScript(aceUrl);
 
                 // Load extensions
-                for (const [extensionName, extensionUrl] of Object.entries(extensions)) {
+                for (const [, extensionUrl] of Object.entries(extensions)) {
                     await this.loadScript(extensionUrl);
                 }
 
@@ -44,16 +46,35 @@ export default function aceEditorComponent({
                 this.editor = ace.edit(this.$refs.aceCodeEditor);
                 this.editor.setOptions(options);
 
-                // Set initial content - use provided state or default placeholder text
-                this.editor.session.setValue(state || placeholder);
+                // Set initial content - let Filament handle state transformation
+                this.editor.session.setValue(this.state || placeholder);
 
                 // Apply the appropriate theme based on current dark/light mode
                 this.applyInitialTheme();
                 this.observeDarkModeChanges();
 
-                // Keep editor state in sync with Livewire component
+                // Watch for Livewire state changes (external changes)
+                this.$watch('state', () => {
+                    if (this.isDestroyed) return;
+
+                    if (!this.shouldUpdateState) {
+                        this.shouldUpdateState = true;
+                        return;
+                    }
+
+                    // Don't update if user is currently editing
+                    if (this.editor.isFocused()) return;
+
+                    this.editor.session.setValue(this.state || placeholder);
+                });
+
+                // Keep Livewire state in sync with editor changes
                 this.editor.session.on('change', () => {
-                    state = this.editor.getValue();
+                    if (this.isDestroyed) return;
+
+                    const currentValue = this.editor.getValue();
+                    this.state = currentValue;
+                    this.shouldUpdateState = false; // Prevent loop back to editor
                 });
 
             } catch (error) {

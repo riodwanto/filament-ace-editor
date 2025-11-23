@@ -53,15 +53,7 @@ class AceEditor extends Field
 
         $this->initializeConfigurations();
 
-        $this->afterStateHydrated(function (AceEditor $component, string | array | null $state): void {
-
-            if (!$state) {
-                return;
-            }
-
-            $component->state($state);
-        });
-
+    
         $this->afterStateUpdated(function (AceEditor $component, Component $livewire): void {
             $livewire->validateOnly($component->getStatePath());
         });
@@ -130,7 +122,7 @@ class AceEditor extends Field
     public function addExtensions(array $exts, ?Closure $callback = null): static
     {
         if ($callback) {
-            $this->extensions = new Collection(call_user_func($callback, $this->extensions, $exts));
+            $this->extensions = new Collection(\call_user_func($callback, $this->extensions, $exts));
         } else {
             $newExtensions = Collection::make($exts);
             $this->extensions = $this->extensions->merge($newExtensions)->unique();
