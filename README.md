@@ -3,7 +3,6 @@
 [![Latest Version on Packagist](https://img.shields.io/packagist/v/riodwanto/filament-ace-editor.svg?style=flat-square)](https://packagist.org/packages/riodwanto/filament-ace-editor)
 [![Total Downloads](https://img.shields.io/packagist/dt/riodwanto/filament-ace-editor.svg?style=flat-square)](https://packagist.org/packages/riodwanto/filament-ace-editor)
 
-
 Ace Editor implementation for Filament Form.
 
 ## Requirements
@@ -15,9 +14,8 @@ Ace Editor implementation for Filament Form.
 
 | Package Version | Filament Version | Status |
 |:---------------:|:----------------:|:--------:|
-| 2.x             | 2.x              | Legacy ✅ |
-| 1.x             | 3.x              | Stable ✅ |
 | **4.x**         | **4.x**          | **Latest ✨** |
+| 1.x             | 3.x              | Stable ✅ |
 
 Choose the package version that matches your Filament installation. We recommend using the latest compatible version for the best features and security updates.
 
@@ -30,6 +28,7 @@ composer require riodwanto/filament-ace-editor
 ```
 
 The package will automatically detect your Filament version and install the compatible release.
+
 ## Usage
 
 ```php
@@ -50,6 +49,7 @@ public function form(Form $form): Form
 ```
 
 ##### Available methods
+
 | Method           | Info                                                                                                        |
 | :--------------- | :---------------------------------------------------------------------------------------------------------- |
 | mode             | change editor programming language                                                                          |
@@ -78,6 +78,7 @@ php artisan vendor:publish --tag="filament-ace-editor-config"
 ```
 
 ###### config
+
 This is the contents of the published config file:
 
 ```php
