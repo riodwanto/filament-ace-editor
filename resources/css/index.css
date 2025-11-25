@@ -1,20 +1,595 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+/*
+ * Filament Ace Editor - Utility-First CSS Implementation
+ * Follows Filament 4 CSS methodology using Tailwind CSS v4
+ */
 
-.ace-editor-wrapper {
-    @apply relative rounded-md shadow-sm ring-1 focus-within:!ring-2 focus-within:!ring-blue-600;
+/*
+ * Semantic Hook Classes (rd- prefix) for External Customization
+ * These follow component-based semantic naming approach
+ */
+
+/* Main editor container - semantic hook */
+.rd-ace-editor {
+    /* Base container styles */
+    @apply relative border rounded-lg ring-1;
+    @apply border-gray-100 ring-gray-100;
+    @apply dark:border-gray-700 dark:ring-gray-600;
+    @apply focus-within:ring-2 focus-within:ring-blue-500;
+    @apply transition-colors duration-200;
+
+    /* Error state */
+    &.has-error {
+        @apply border-red-500 ring-red-500 dark:border-red-400 dark:ring-red-400;
+    }
+
+    /* Disabled state */
+    &.rd-ace-editor-disabled {
+        @apply bg-gray-50 border-gray-200 ring-gray-200;
+        @apply dark:bg-gray-800 dark:border-gray-600 dark:ring-gray-600;
+        @apply opacity-75;
+        @apply cursor-not-allowed;
+
+        .rd-ace-editor-content {
+            @apply pointer-events-none;
+        }
+    }
+
+    /* Fullscreen mode */
+    &--fullscreen {
+        @apply fixed inset-0 z-[9999] w-screen h-screen;
+        @apply bg-white dark:bg-gray-900;
+        @apply overflow-hidden;
+        @apply transition-all duration-200 ease-out;
+        @apply scale-100 opacity-100;
+
+        /* Content in fullscreen */
+        .rd-ace-editor-content {
+            @apply h-full border-none rounded-none;
+        }
+
+        /* Toolbar in fullscreen */
+        .rd-ace-editor-toolbar {
+            @apply border-gray-200 rounded-none dark:border-gray-700;
+        }
+
+        /* Status bar in fullscreen */
+        .rd-ace-editor-status {
+            @apply border-gray-200 rounded-none dark:border-gray-700;
+        }
+    }
+
+    /* Header section */
+    &-header {
+        @apply flex items-center justify-between;
+        @apply px-3 py-2 border-b border-gray-200 bg-gray-50;
+        @apply dark:bg-gray-800 dark:border-gray-700;
+        @apply rounded-t-lg;
+
+        &-title {
+            @apply text-sm font-semibold text-gray-700 dark:text-gray-300;
+            @apply tracking-wide uppercase;
+        }
+
+        &-actions {
+            @apply flex items-center gap-2;
+        }
+
+        /* Fullscreen action in header */
+        &-fullscreen {
+            @apply inline-flex items-center justify-center;
+            @apply w-8 h-8 p-0;
+            @apply text-sm font-medium;
+            @apply bg-transparent border border-transparent;
+            @apply text-gray-600 rounded;
+            @apply transition-all duration-150 ease-in-out;
+            @apply hover:bg-gray-200 hover:text-gray-900;
+            @apply hover:scale-105 hover:shadow-sm;
+            @apply focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1;
+            @apply dark:text-gray-300 dark:hover:bg-gray-600 dark:hover:text-gray-100;
+
+            /* Fullscreen icon using mask-image */
+            &::before {
+                content: '';
+                @apply block w-4 h-4;
+                background-color: currentColor;
+                mask-size: contain;
+                mask-repeat: no-repeat;
+                mask-position: center;
+                mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2'%3E%3Cpath d='M8 3H5a2 2 0 00-2 2v3m18 0V5a2 2 0 00-2-2h-3m0 18h3a2 2 0 002-2v-3M3 16v3a2 2 0 002 2h3'/%3E%3C/svg%3E");
+                @apply transition-colors duration-150;
+            }
+
+            /* Hover state */
+            &:hover::before {
+                @apply text-current;
+            }
+        }
+
+        /* Exit fullscreen action in header */
+        &-exit-fullscreen {
+            @apply bg-white border-gray-200;
+            @apply dark:bg-gray-700 dark:border-gray-600;
+            @apply hover:bg-gray-50 hover:border-gray-300;
+            @apply dark:hover:bg-gray-600 dark:hover:border-gray-500;
+
+            /* Exit fullscreen icon */
+            &::before {
+                mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2'%3E%3Cpath d='M6 18L18 6M6 6l12 12'/%3E%3C/svg%3E");
+            }
+        }
+    }
+
+    /* Toolbar section */
+    &-toolbar {
+        @apply flex flex-wrap items-center justify-end;
+        @apply gap-2 px-3 py-2;
+        @apply border-b border-gray-200 bg-gray-50;
+        @apply dark:bg-gray-800 dark:border-gray-700;
+        @apply transition-colors duration-200;
+
+        /* Empty toolbar state */
+        &--empty {
+            @apply justify-center;
+        }
+
+        /* Toolbar button group */
+        &-group {
+            @apply flex flex-wrap items-center gap-1;
+        }
+
+        /* Toolbar controls container */
+        &-controls {
+            @apply flex items-center gap-3;
+            @apply ml-auto; /* Push all controls to the right */
+        }
+
+        /* Font size selector */
+        &-font-size {
+            @apply flex items-center gap-2;
+            @apply text-sm text-gray-600 dark:text-gray-300;
+
+            select {
+                /* Reduced padding for more compact appearance */
+                @apply h-8 w-20 pl-1 pr-0 py-0 text-xs;
+                @apply bg-white border border-gray-200 rounded;
+                @apply text-gray-700 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-300;
+                @apply focus:outline-none focus:ring-1 focus:ring-opacity-50;
+                @apply cursor-pointer;
+                @apply transition-all duration-150 ease-in-out;
+                @apply hover:bg-gray-50 hover:border-gray-300;
+                @apply hover:shadow-sm;
+                @apply dark:hover:bg-gray-600 dark:hover:border-gray-500;
+                /* Compact button styling */
+                @apply font-medium;
+                @apply text-center;
+                @apply appearance-none;
+                /* Smaller chevron for better proportions */
+                background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 12 12'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M3 4.5l3 3 3-3'/%3e%3c/svg%3e");
+                background-position: center right 4px;
+                background-repeat: no-repeat;
+                background-size: 12px;
+                padding-right: 16px;
+                /* Dark mode chevron */
+                .dark & {
+                    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 12 12'%3e%3cpath stroke='%239ca3af' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M3 4.5l3 3 3-3'/%3e%3c/svg%3e");
+                }
+                /* Use dynamic primary color for focus */
+                --tw-ring-color: var(--filament-primary-color, rgb(99 102 241 / 0.5));
+
+                option {
+                    @apply text-gray-700 dark:text-gray-300;
+                    @apply bg-white dark:bg-gray-700;
+                }
+            }
+
+            label {
+                @apply text-xs font-medium;
+                @apply text-gray-500 dark:text-gray-400;
+                @apply tracking-wide uppercase;
+                @apply whitespace-nowrap;
+            }
+        }
+
+        /* Word wrap selector */
+        &-word-wrap {
+            @apply flex items-center gap-2;
+            @apply text-sm text-gray-600 dark:text-gray-300;
+
+            select {
+                /* Reduced padding for more compact appearance */
+                @apply h-8 w-20 pl-1 pr-0 py-0 text-xs;
+                @apply bg-white border border-gray-200 rounded;
+                @apply text-gray-700 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-300;
+                @apply focus:outline-none focus:ring-1 focus:ring-opacity-50;
+                @apply cursor-pointer;
+                @apply transition-all duration-150 ease-in-out;
+                @apply hover:bg-gray-50 hover:border-gray-300;
+                @apply hover:shadow-sm;
+                @apply dark:hover:bg-gray-600 dark:hover:border-gray-500;
+                /* Compact button styling */
+                @apply font-medium;
+                @apply text-center;
+                @apply appearance-none;
+                /* Smaller chevron for better proportions */
+                background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 12 12'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M3 4.5l3 3 3-3'/%3e%3c/svg%3e");
+                background-position: center right 4px;
+                background-repeat: no-repeat;
+                background-size: 12px;
+                padding-right: 16px;
+                /* Dark mode chevron */
+                .dark & {
+                    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 12 12'%3e%3cpath stroke='%239ca3af' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M3 4.5l3 3 3-3'/%3e%3c/svg%3e");
+                }
+                /* Use dynamic primary color for focus */
+                --tw-ring-color: var(--filament-primary-color, rgb(99 102 241 / 0.5));
+
+                option {
+                    @apply text-gray-700 dark:text-gray-300;
+                    @apply bg-white dark:bg-gray-700;
+                }
+            }
+
+            label {
+                @apply text-xs font-medium;
+                @apply text-gray-500 dark:text-gray-400;
+                @apply tracking-wide uppercase;
+                @apply whitespace-nowrap;
+            }
+        }
+    }
+
+    /* Toolbar buttons */
+    &-btn {
+        @apply inline-flex items-center justify-center;
+        @apply w-8 h-8 p-0;
+        @apply text-sm font-medium;
+        @apply bg-white border border-gray-200;
+        @apply text-gray-600 rounded;
+        @apply transition-all duration-150 ease-in-out;
+        @apply hover:bg-gray-50 hover:text-gray-900 hover:border-gray-300;
+        @apply hover:scale-105 hover:shadow-sm;
+        @apply focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1;
+        @apply dark:bg-gray-700 dark:border-gray-600 dark:text-gray-300;
+        @apply dark:hover:bg-gray-600 dark:hover:text-gray-100 dark:hover:border-gray-500;
+        @apply disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 disabled:hover:shadow-none;
+        @apply disabled:hover:bg-white dark:disabled:hover:bg-gray-700;
+        @apply disabled:hover:text-gray-600 dark:disabled:hover:text-gray-300;
+
+        /* Active state for toggle buttons - use Filament primary colors (customizable via CSS variables) */
+        &.rd-ace-btn--active,
+        &.active {
+            /* Keep button normal, just change icon color */
+            &::before {
+                background-color: var(--filament-primary-color, rgb(99 102 241)); /* primary-600 with fallback */
+                /* Make active icons even bolder */
+                filter: brightness(1.2) contrast(1.3) saturate(1.1);
+                transform: scale(1.1);
+                box-shadow: 0 0 2px rgba(0, 0, 0, 0.2);
+            }
+        }
+
+        /* Dark mode active state for toggle buttons */
+        @media (prefers-color-scheme: dark) {
+            &.rd-ace-btn--active,
+            &.active {
+                &::before {
+                    background-color: var(--filament-primary-color-dark, rgb(129 140 248)); /* primary-500 with fallback */
+                }
+            }
+        }
+
+        /* Dark class support for Filament dark mode */
+        .dark &.rd-ace-btn--active,
+        .dark &.active {
+            &::before {
+                background-color: var(--filament-primary-color-dark, rgb(129 140 248)); /* primary-500 with fallback */
+            }
+        }
+
+        /* Note: fullscreen buttons moved to header section */
+
+        /* Button icon styles using CSS mask-image */
+        &::before {
+            content: '';
+            display: block;
+            width: 18px;
+            height: 18px;
+            @apply transition-colors duration-150;
+            @apply text-gray-600 dark:text-gray-300;
+            background-color: currentColor;
+            mask-size: contain;
+            mask-repeat: no-repeat;
+            mask-position: center;
+            /* Make icon appear bolder */
+            filter: brightness(1.1) contrast(1.2);
+            transform: scale(1.05);
+        }
+
+        /* Icon hover states */
+        &:hover:not(:disabled)::before {
+            @apply text-gray-900 dark:text-gray-100;
+        }
+
+        /* Icon disabled states */
+        &:disabled::before {
+            @apply text-gray-400 dark:text-gray-500;
+        }
+
+        /* Hide original SVG icons from JavaScript */
+        svg {
+            @apply hidden;
+        }
+
+        /* Specific button icons using mask-image */
+        &--undo::before {
+            mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2'%3E%3Cpath d='M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6'/%3E%3C/svg%3E");
+        }
+
+        &--redo::before {
+            mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2'%3E%3Cpath d='M21 10h-10a8 8 0 00-8 8v2M21 10l-6 6m6-6l-6-6'/%3E%3C/svg%3E");
+        }
+
+        &--find::before {
+            mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2'%3E%3Ccircle cx='11' cy='11' r='8'/%3E%3Cpath d='m21 21-4.35-4.35'/%3E%3C/svg%3E");
+        }
+
+        &--replace::before {
+            mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2'%3E%3Cpath d='M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z'/%3E%3Cpath d='M12 3v7l7 7'/%3E%3C/svg%3E");
+        }
+
+        &--goto-line::before {
+            mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2'%3E%3Cpath d='M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6'/%3E%3Cpath d='M13 2h3a2 2 0 012 2v3'/%3E%3Cline x1='12' y1='22' x2='12' y2='16'/%3E%3Cline x1='8' y1='22' x2='16' y2='22'/%3E%3C/svg%3E");
+        }
+
+        &--toggle-comment::before {
+            mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2'%3E%3Cpath d='M4 12h16M4 6h16M4 18h7'/%3E%3Cpath d='M9 14h6M9 10h6'/%3E%3Cpath d='M20 2H4c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z'/%3E%3C/svg%3E");
+        }
+
+        &--fullscreen::before {
+            mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2'%3E%3Cpath d='M8 3H5a2 2 0 00-2 2v3m18 0V5a2 2 0 00-2-2h-3m0 18h3a2 2 0 002-2v-3M3 16v3a2 2 0 002 2h3'/%3E%3C/svg%3E");
+        }
+
+        &--toggle-fold::before {
+            mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2'%3E%3Cpath d='M10 6h4a2 2 0 012 2v8a2 2 0 01-2 2h-4a2 2 0 01-2-2V8a2 2 0 012-2z'/%3E%3Cpath d='M4 12h16'/%3E%3C/svg%3E");
+        }
+
+        /* Dynamic fold button state - will be controlled by JavaScript */
+        &--toggle-fold.fold-state-unfold::before {
+            mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2'%3E%3Cpath d='M10 6h4a2 2 0 012 2v8a2 2 0 01-2 2h-4a2 2 0 01-2-2V8a2 2 0 012-2z'/%3E%3Cpath d='M4 12h16'/%3E%3Cpath d='M12 6v12'/%3E%3C/svg%3E");
+        }
+
+        
+        &--show-invisibles::before {
+            mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2'%3E%3Ccircle cx='12' cy='12' r='3'/%3E%3Cpath d='M12 1v6m0 6v6m4.22-13.22l4.24 4.24M1.54 1.54l4.24 4.24M20.46 20.46l-4.24-4.24M1.54 20.46l4.24-4.24'/%3E%3C/svg%3E");
+        }
+
+        &--toggle-wordwrap::before {
+            mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2'%3E%3Cpolyline points='4 7 4 4 20 4 20 7'/%3E%3Cline x1='9' y1='20' x2='15' y2='20'/%3E%3Cline x1='12' y1='4' x2='12' y2='20'/%3E%3C/svg%3E");
+        }
+
+        &--convert-uppercase::before {
+            mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2'%3E%3Cpolyline points='7 11 9 13 17 5'/%3E%3Cpath d='M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11'/%3E%3Cpath d='M12 3v9'/%3E%3Cpath d='M9 6h6'/%3E%3C/svg%3E");
+        }
+
+        &--convert-lowercase::before {
+            mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2'%3E%3Cpath d='M3 7V5a2 2 0 012-2h14a2 2 0 012 2v12a2 2 0 01-2 2h-4'/%3E%3Cpolyline points='3 7 12 16 21 7'/%3E%3Cline x1='8' y1='11' x2='16' y2='11'/%3E%3Cline x1='8' y1='15' x2='16' y2='15'/%3E%3C/svg%3E");
+        }
+
+        &--toggle-print-margin::before {
+            mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2'%3E%3Cpath d='M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z'/%3E%3Cpolyline points='14 2 14 8 20 8'/%3E%3Cline x1='16' y1='13' x2='8' y2='13'/%3E%3Cline x1='16' y1='17' x2='8' y2='17'/%3E%3Cpolyline points='10 9 9 9 8 9'/%3E%3C/svg%3E");
+        }
+
+
+      }
+
+    /* Editor content area */
+    &-content {
+        /* @apply border border-gray-200 dark:border-gray-700; */
+        @apply transition-colors duration-200;
+
+        /* When header is present */
+        &.with-header {
+            @apply border-t-0 rounded-t-none;
+        }
+
+        /* When toolbar is present */
+        &.has-toolbar {
+            @apply border-t-0;
+
+            /* If no header, toolbar gets top corners */
+            &.no-header {
+                @apply rounded-t-lg;
+            }
+        }
+
+        /* When no toolbar */
+        &.no-toolbar {
+            /* If header present, only round bottom */
+            &.with-header {
+                @apply rounded-b-lg;
+            }
+            /* If no header, round all corners */
+            &.no-header {
+                @apply rounded-lg;
+            }
+        }
+    }
+
+    /* ACE Editor wrapper */
+    &-wrapper {
+        @apply w-full h-full;
+    }
+
+    /* Status bar */
+    &-status {
+        @apply flex items-center justify-between;
+        @apply px-3 py-1.5 text-xs;
+        @apply border-t border-gray-200 bg-gray-50;
+        @apply dark:bg-gray-800 dark:border-gray-700;
+        @apply font-mono;
+        @apply rounded-b-lg;
+
+        /* Status sections */
+        &-position,
+        &-info {
+            @apply text-gray-600 dark:text-gray-400;
+
+            /* Emphasized text in status */
+            span {
+                @apply text-gray-800 dark:text-gray-200;
+            }
+        }
+    }
+
+    /* Validation feedback */
+    &-error {
+        @apply mt-1 text-sm text-red-600 dark:text-red-400;
+    }
+
+    /* Footer section */
+    &-footer {
+        @apply px-3 py-2 border-t border-gray-200 bg-gray-50;
+        @apply dark:bg-gray-800 dark:border-gray-700;
+        @apply rounded-b-lg;
+        @apply text-xs text-gray-500 dark:text-gray-400;
+    }
 }
 
-.ace-editor-wrapper.base {
-    @apply ring-gray-300 dark:ring-gray-600;
+/*
+ * Responsive Design using Tailwind's responsive utilities
+ */
+@media (max-width: 640px) {
+    .rd-ace-editor {
+        /* Mobile header layout */
+        &-header {
+            @apply flex-col items-start gap-2;
+
+            &-actions {
+                @apply justify-end w-full;
+            }
+        }
+
+        /* Mobile toolbar layout */
+        &-toolbar {
+            @apply flex-col items-stretch gap-1;
+
+            /* Toolbar groups on mobile */
+            &-group {
+                @apply justify-center;
+            }
+
+            /* Toolbar controls on mobile */
+            &-controls {
+                @apply flex-col items-stretch gap-2;
+                @apply pt-2 mt-2 border-t border-gray-200 dark:border-gray-600;
+            }
+        }
+    }
 }
 
-.ace-editor-wrapper.danger {
-    @apply ring-red-600 dark:ring-red-500;
+/*
+ * Animation utilities using Tailwind's animation classes
+ */
+.rd-ace-editor--fullscreen {
+    @apply transition-all duration-200 ease-out;
+    @apply scale-100 opacity-100;
 }
 
-.ace-editor {
-    @apply w-full h-full rounded-md;
+/*
+ * Focus ring utilities using CSS variables for dynamic theming
+ * This integrates with Filament's dynamic theming system
+ */
+.rd-ace-editor {
+    &:focus-within {
+        --tw-ring-color: var(--filament-primary-color, rgb(99 102 241 / 0.5));
+    }
+
+    &-btn:focus {
+        --tw-ring-color: var(--filament-primary-color, rgb(99 102 241 / 0.5));
+    }
+}
+
+/*
+ * Print Margin Performance Optimizations
+ * Based on ACE Editor implementation research
+ */
+
+/* Optimize print margin rendering for better performance */
+.ace_print-margin {
+    /* Hardware acceleration for smooth rendering */
+    transform: translateZ(0);
+    will-change: transform, opacity;
+
+    /* Optimize for compositing */
+    backface-visibility: hidden;
+
+    /* Ensure smooth transitions */
+    transition: opacity 0.1s ease-out, transform 0.1s ease-out;
+}
+
+/* Dark mode optimizations */
+.dark .ace_print-margin {
+    /* Better contrast in dark themes */
+    opacity: 0.8;
+}
+
+/* Print margin focus state */
+.ace_editor:focus .ace_print-margin {
+    /* Slightly more visible when editor is focused */
+    opacity: 1;
+}
+
+/*
+ * Print styles - hide editor controls when printing
+ */
+@media print {
+    .rd-ace-editor {
+        /* Hide all UI controls in print */
+        &-toolbar,
+        &-status,
+        &-header,
+        &-footer {
+            @apply hidden;
+        }
+
+        /* Clean content area for printing */
+        &-content {
+            @apply border-none rounded-t-lg shadow-none;
+        }
+    }
+}
+
+/*
+ * High contrast mode support
+ */
+@media (prefers-contrast: high) {
+    .rd-ace-editor {
+        @apply border-2 border-black dark:border-white;
+
+        /* Buttons in high contrast mode */
+        &-btn {
+            @apply border-2 border-black dark:border-white;
+        }
+    }
+}
+
+/*
+ * Reduced motion support
+ */
+@media (prefers-reduced-motion: reduce) {
+    .rd-ace-editor {
+        /* Remove transitions from animated elements */
+        &,
+        &-btn,
+        &-toolbar,
+        &-content {
+            @apply transition-none;
+        }
+
+        /* Disable hover animations */
+        &-btn:hover {
+            @apply transform-none hover:scale-100;
+        }
+    }
 }
 
