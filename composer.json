@@ -2,6 +2,7 @@
     "name": "riodwanto/filament-ace-editor",
     "description": "An ACE editor field for Filament forms with syntax highlighting, themes, and autocompletion.",
     "version": "4.0.1",
+    "type": "filament-plugin",
     "keywords": [
         "filament",
         "filament-forms",
