@@ -34,6 +34,7 @@ class FilamentAceEditorServiceProvider extends PackageServiceProvider
 
     public function packageRegistered(): void
     {
+        parent::packageRegistered();
     }
 
     public function packageBooted(): void
