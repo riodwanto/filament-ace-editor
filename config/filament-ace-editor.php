@@ -22,46 +22,91 @@ return [
         'useWorker' => false
     ],
 
-    /**
-     * Default editor options for new instances
-     * These can be overridden per field using the editorOptions() method
-     */
+    /*
+    |--------------------------------------------------------------------------
+    | Default Editor Options
+    |--------------------------------------------------------------------------
+    |
+    | These are the default options applied to all AceEditor instances.
+    | You can override these per field using the editorOptions() method.
+    |
+    */
     'editor_options' => [
-        'mode' => 'ace/mode/php',                    // Default syntax highlighting
-        'theme' => 'ace/theme/eclipse',             // Default light theme
-        'enableBasicAutocompletion' => true,        // Enable basic autocompletion
-        'enableLiveAutocompletion' => true,         // Enable live autocompletion as you type
-        'liveAutocompletionDelay' => 0,             // No delay for autocompletion
-        'liveAutocompletionThreshold' => 0,         // Always show autocompletion
-        'enableSnippets' => true,                   // Enable code snippets
-        'enableInlineAutocompletion' => true,       // Enable inline autocompletion
-        'showPrintMargin' => false,                 // Hide the print margin line
-        'wrap' => 'free'                            // Enable free word wrapping
+        'mode' => 'ace/mode/php',
+        'theme' => 'ace/theme/eclipse',
+        'enableBasicAutocompletion' => true,
+        'enableLiveAutocompletion' => true,
+        'liveAutocompletionDelay' => 0,
+        'liveAutocompletionThreshold' => 0,
+        'enableSnippets' => true,
+        'enableInlineAutocompletion' => true,
+        'showPrintMargin' => true,
+        'wrap' => 'off',
+        // Performance optimizations
+        'animatedScroll' => false,
+        'fadeFoldWidgets' => false,
+        'displayIndentGuides' => false,
+        'highlightGutterLine' => false,
+        'showInvisibles' => false,
     ],
 
-    /**
-     * Dark mode configuration
-     * Controls how the editor behaves when Filament is in dark mode
-     */
+    /*
+    |--------------------------------------------------------------------------
+    | Dark Mode Configuration
+    |--------------------------------------------------------------------------
+    |
+    | Controls how the editor behaves when Filament is in dark mode.
+    |
+    */
     'dark_mode' => [
-        'enable' => true,                           // Enable automatic dark mode switching
-        'theme' => 'ace/theme/dracula',             // Theme to use in dark mode
+        'enable' => true,
+        'theme' => 'ace/theme/dracula',
     ],
 
-    /**
-     * Extensions that should be loaded by default
-     * Add extension keys from the 'extensions' array below
-     */
+    /*
+    |--------------------------------------------------------------------------
+    | Default Extensions
+    |--------------------------------------------------------------------------
+    |
+    | Extensions that should be loaded by default. Add extension keys
+    | from the 'extensions' array below.
+    |
+    */
     'enabled_extensions' => [
-        'beautify',              // Code formatting/beautification
-        'language_tools',       // Advanced language tools
-        'inline_autocomplete',   // Inline autocompletion suggestions
+        'beautify',
+        'language_tools',
+        'inline_autocomplete',
+        'rtl',
+        'statusbar',
+        'whitespace',
+        'searchbox',
     ],
 
-    /**
-     * Available ACE editor extensions and their CDN URLs
-     * Add custom extensions here as needed
-     */
+    /*
+    |--------------------------------------------------------------------------
+    | Overscroll Configuration
+    |--------------------------------------------------------------------------
+    |
+    | These settings affect the scroll behavior and overscroll effects.
+    |
+    */
+    'overscroll' => [
+        'enabled' => false,
+        'size' => 16,
+        'behavior' => 'manual',
+        'horizontal' => true,
+        'vertical' => true,
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Available Extensions
+    |--------------------------------------------------------------------------
+    |
+    | Available ACE editor extensions and their CDN URLs.
+    | Add custom extensions here as needed.
+    |
+    */
     'extensions' => [
         'beautify' => 'https://cdnjs.cloudflare.com/ajax/libs/ace/1.43.3/ext-beautify.min.js',
         'code_lens' => 'https://cdnjs.cloudflare.com/ajax/libs/ace/1.43.3/ext-code_lens.min.js',
