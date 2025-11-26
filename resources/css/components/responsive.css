@@ -1,0 +1,69 @@
+/* Responsive Design */
+@media (max-width: 640px) {
+    .rd-ace-editor-header {
+        @apply flex-col items-start gap-2;
+    }
+
+    .rd-ace-editor-header-actions {
+        @apply justify-end w-full;
+    }
+
+    .rd-ace-editor-toolbar {
+        @apply flex-col items-stretch gap-1;
+    }
+
+    .rd-ace-editor-toolbar-group {
+        @apply justify-center;
+    }
+
+    .rd-ace-editor-toolbar-controls {
+        @apply flex-col items-stretch gap-2;
+        @apply pt-2 mt-2 border-t;
+        border-color: hsl(var(--border));
+    }
+
+    .rd-ace-editor-control {
+        @apply flex-col items-start gap-1;
+
+        select {
+            @apply w-full;
+        }
+    }
+}
+
+@media (prefers-contrast: high) {
+    .rd-ace-editor {
+        @apply border-2 dark:border-white;
+        border-color: hsl(var(--foreground));
+    }
+
+    .rd-ace-editor-btn {
+        @apply border-2 dark:border-white;
+        border-color: hsl(var(--foreground));
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .rd-ace-editor,
+    .rd-ace-editor-btn,
+    .rd-ace-editor-toolbar,
+    .rd-ace-editor-content {
+        @apply transition-none;
+    }
+
+    .rd-ace-editor-btn:hover {
+        @apply transform-none hover:scale-100;
+    }
+}
+
+@media print {
+    .rd-ace-editor-toolbar,
+    .rd-ace-editor-status,
+    .rd-ace-editor-header {
+        @apply hidden;
+    }
+
+    .rd-ace-editor-content {
+        @apply border-none rounded-t-lg shadow-none;
+    }
+}

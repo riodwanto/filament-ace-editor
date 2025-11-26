@@ -1,0 +1,80 @@
+/* Toolbar Component */
+.rd-ace-editor-toolbar {
+    @apply relative flex flex-wrap items-center justify-between gap-x-3 gap-y-1;
+    @apply border-b px-2.5 py-2;
+    @apply bg-white border-gray-200 dark:bg-gray-800 dark:border-gray-700;
+
+    &.rd-ace-toolbar--empty {
+        @apply justify-center;
+    }
+}
+
+.rd-ace-editor-toolbar-group {
+    @apply flex gap-x-1;
+}
+
+.rd-ace-editor-toolbar-controls {
+    @apply flex items-center gap-3 ml-auto;
+}
+
+.rd-ace-editor-control {
+    @apply flex items-center gap-2 text-gray-500 dark:text-gray-400;
+
+      select,
+    .rd-ace-editor-select {
+        @apply h-8 px-3 py-0 text-xs font-medium text-center cursor-pointer w-fit min-w-fit;
+        @apply transition-all duration-150 ease-in-out rounded hover:shadow-sm;
+        @apply focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-primary-600/20;
+        @apply bg-white border border-gray-300 dark:bg-gray-900 dark:border-gray-600;
+        @apply text-gray-900 dark:text-gray-100;
+
+        -webkit-appearance: none;
+        -moz-appearance: none;
+        appearance: none;
+
+        &::-ms-expand {
+            display: none;
+        }
+
+        padding-right: 28px;
+
+        background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 10 6'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M1 1l4 4 4-4'/%3e%3c/svg%3e");
+        background-position: center right 8px;
+        background-repeat: no-repeat;
+        background-size: 10px 6px;
+
+        .dark & {
+            background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 10 6'%3e%3cpath stroke='%239ca3af' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M1 1l4 4 4-4'/%3e%3c/svg%3e");
+        }
+
+        &:hover {
+            @apply border-gray-400 bg-gray-50 dark:bg-gray-800 dark:border-gray-500;
+        }
+
+        &::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        &::-webkit-scrollbar-track {
+            @apply bg-gray-100 dark:bg-gray-800;
+        }
+
+        &::-webkit-scrollbar-thumb {
+            @apply bg-gray-300 rounded dark:bg-gray-600;
+        }
+
+        &::-webkit-scrollbar-thumb:hover {
+            @apply bg-gray-400 dark:bg-gray-500;
+        }
+    }
+
+    select option,
+    .rd-ace-editor-select option {
+        @apply text-gray-900 bg-white dark:bg-gray-900 dark:text-gray-100;
+        padding: 8px 12px;
+    }
+
+    label {
+        @apply text-xs font-medium tracking-wide text-gray-500 uppercase whitespace-nowrap dark:text-gray-400;
+    }
+}

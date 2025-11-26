@@ -1,0 +1,9 @@
+.rd-ace-focus-ring {
+    @apply focus:outline-none focus:ring-2 focus:ring-offset-1;
+    --tw-ring-color: hsl(var(--ring));
+}
+
+.rd-ace-focus-ring-primary {
+    @apply focus:outline-none focus:ring-2 focus:ring-offset-1;
+    --tw-ring-color: hsl(var(--primary));
+}

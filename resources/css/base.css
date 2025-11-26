@@ -1,0 +1,8 @@
+*, *::before, *::after {
+    box-sizing: border-box;
+}
+
+.rd-ace-editor,
+.rd-ace-editor * {
+    isolation: isolate;
+}
