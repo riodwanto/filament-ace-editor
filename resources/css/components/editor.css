@@ -40,9 +40,59 @@
 }
 
 .rd-ace-editor-wrapper {
-    @apply w-full h-full;
+    @apply relative w-full h-full;
 }
 
 .rd-ace-toolbar-no-header {
     @apply rounded-t-lg;
+}
+
+.rd-ace-coffee-widget {
+    @apply absolute bottom-2 right-2 z-10;
+
+    .rd-ace-coffee-widget-link {
+        @apply block no-underline transition-all duration-300 hover:scale-105;
+
+        &:active {
+            @apply scale-95;
+        }
+    }
+
+    .rd-ace-coffee-widget-content {
+        @apply flex flex-col items-center gap-1 bg-transparent backdrop-blur-sm rounded-lg p-2;
+    }
+
+    .rd-ace-coffee-widget-gif {
+        @apply w-12 h-12 rounded-md object-cover;
+    }
+}
+
+/* Dark mode specific adjustments */
+@media (prefers-color-scheme: dark) {
+    .rd-ace-coffee-widget .rd-ace-coffee-widget-content {
+        @apply bg-gray-800/95 border-gray-700/50;
+
+        &:hover {
+            @apply bg-gray-800;
+        }
+    }
+}
+
+/* Responsive adjustments */
+@media (max-width: 640px) {
+    .rd-ace-coffee-widget {
+        @apply bottom-2 right-2;
+
+        .rd-ace-coffee-widget-gif {
+            @apply w-8 h-8;
+        }
+
+        .rd-ace-coffee-widget-text {
+            @apply hidden;
+        }
+
+        .rd-ace-coffee-widget-content {
+            @apply p-1;
+        }
+    }
 }

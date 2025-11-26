@@ -59,20 +59,13 @@
                 overscrollOptions: @js($getOverscrollOptions()),
                 isFullscreen: false,
                 isDisabled: @js($isDisabled),
-            })" x-ref="aceCodeEditor"
-            @class([
+            })" x-ref="aceCodeEditor" @class([
                 'rd-ace-editor rd-ace-transition',
                 'has-error' => $errors->has($statePath),
                 'rd-ace-editor-disabled' => $isDisabled,
-            ])
-            role="group"
-            aria-labelledby="rd-ace-editor-label-{{ $statePath }}"
-            @if ($errors->has($statePath))
-                aria-describedby="rd-ace-editor-error-{{ $statePath }}"
-            @endif
-            @if ($isDisabled)
-                aria-disabled="true"
-            @endif
+            ]) role="group"
+            aria-labelledby="rd-ace-editor-label-{{ $statePath }}" @if ($errors->has($statePath))
+            aria-describedby="rd-ace-editor-error-{{ $statePath }}" @endif @if ($isDisabled) aria-disabled="true" @endif
             {{ $getExtraInputAttributeBag()->merge([]) }}>
             <!-- Header bar with title and fullscreen action -->
             @if($isHeaderEnabled())
@@ -83,20 +76,17 @@
                     <div class="rd-ace-editor-header-actions">
                         <!-- Coffee Sticker -->
                         <a href="https://buymeacoffee.com/riodewanto" target="_blank" rel="noopener noreferrer"
-                            class="rd-ace-coffee-sticker"
-                            title="Buy me a coffee!"
+                            class="rd-ace-coffee-sticker" title="Buy me a coffee!"
                             aria-label="Support the developer - Buy me a coffee">
                             <img src="https://media0.giphy.com/media/v1.Y2lkPTc5MGI3NjExNWNkZjN0ZHR6Nndyc3c1eTN5MThheTQ1bGU4MWcyNnVtdzR6b3k5bSZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9cw/TDQOtnWgsBx99cNoyH/giphy.gif"
                                 alt="Buy Me a Coffee sticker" class="rd-ace-coffee-sticker-img" loading="lazy">
                         </a>
                         <!-- Fullscreen action -->
-                        <button type="button"
-                            @click="!isDisabled && toggleFullscreen()"
+                        <button type="button" @click="!isDisabled && toggleFullscreen()"
                             x-bind:title="isFullscreen ? 'Exit Fullscreen (Esc)' : 'Toggle Fullscreen (Ctrl+Shift+F)'"
                             x-bind:class="isFullscreen ? 'rd-ace-editor-header-fullscreen rd-ace-exit-fullscreen' : 'rd-ace-editor-header-fullscreen rd-ace-enter-fullscreen'"
                             x-bind:aria-label="isFullscreen ? 'Exit fullscreen mode (Escape key)' : 'Toggle fullscreen mode (Ctrl+Shift+F or Ctrl+F11)'"
-                            :disabled="isDisabled"
-                            aria-controls="rd-ace-editor-content-{{ $statePath }}"
+                            :disabled="isDisabled" aria-controls="rd-ace-editor-content-{{ $statePath }}"
                             class="rd-ace-focus-ring">
                             <span class="sr-only">Toggle fullscreen</span>
                         </button>
@@ -106,19 +96,15 @@
 
             <!-- Toolbar inside Alpine component -->
             <div x-show="hasToolbar" x-transition class="rd-ace-editor-toolbar"
-                :class="!{{ $isHeaderEnabled() ? 'true' : 'false' }} ? 'rd-ace-toolbar-no-header' : ''"
-                role="toolbar"
+                :class="!{{ $isHeaderEnabled() ? 'true' : 'false' }} ? 'rd-ace-toolbar-no-header' : ''" role="toolbar"
                 aria-label="Editor toolbar">
                 <div class="rd-ace-editor-toolbar-group" role="group" aria-label="Editor actions">
                     <template x-for="button in toolbarButtons" :key="button">
-                        <button type="button"
-                            @click="!isDisabled && executeToolbarAction(button, $event)"
+                        <button type="button" @click="!isDisabled && executeToolbarAction(button, $event)"
                             x-tooltip="{ content: getButtonTitle(button), theme: $store.theme }"
                             :class="`rd-ace-editor-btn rd-ace-btn-${button} rd-ace-variant-ghost rd-ace-size-sm ${getButtonActiveState(button) ? 'rd-ace-btn-active' : ''} rd-ace-focus-ring`"
-                            :disabled="getButtonDisabled(button) || isDisabled"
-                            :aria-label="getButtonTitle(button)"
-                            :data-button="button"
-                            :title="getButtonTitle(button)">
+                            :disabled="getButtonDisabled(button) || isDisabled" :aria-label="getButtonTitle(button)"
+                            :data-button="button" :title="getButtonTitle(button)">
                             <span class="sr-only" x-text="getButtonTitle(button)"></span>
                         </button>
                     </template>
@@ -129,12 +115,9 @@
                     <!-- Word wrap selector -->
                     <div class="rd-ace-editor-control">
                         <label for="word-wrap-select-{{ $statePath }}">Word Wrap</label>
-                        <select id="word-wrap-select-{{ $statePath }}"
-                            x-model="currentWordWrap"
-                            @change="!isDisabled && changeWordWrap($event.target.value)"
-                            :disabled="isDisabled"
-                            class="rd-ace-focus-ring rd-ace-editor-select"
-                            aria-label="Select word wrap mode">
+                        <select id="word-wrap-select-{{ $statePath }}" x-model="currentWordWrap"
+                            @change="!isDisabled && changeWordWrap($event.target.value)" :disabled="isDisabled"
+                            class="rd-ace-focus-ring rd-ace-editor-select" aria-label="Select word wrap mode">
                             <option value="off" x-bind:selected="currentWordWrap === 'off'">Off</option>
                             <option value="soft" x-bind:selected="currentWordWrap === 'soft'">Soft</option>
                             <option value="hard" x-bind:selected="currentWordWrap === 'hard'">Hard</option>
@@ -144,12 +127,9 @@
                     <!-- Font size selector -->
                     <div class="rd-ace-editor-control">
                         <label for="font-size-select-{{ $statePath }}">Font Size</label>
-                        <select id="font-size-select-{{ $statePath }}"
-                            x-model="currentFontSize"
-                            @change="!isDisabled && changeFontSize($event.target.value)"
-                            :disabled="isDisabled"
-                            class="rd-ace-focus-ring rd-ace-editor-select"
-                            aria-label="Select font size">
+                        <select id="font-size-select-{{ $statePath }}" x-model="currentFontSize"
+                            @change="!isDisabled && changeFontSize($event.target.value)" :disabled="isDisabled"
+                            class="rd-ace-focus-ring rd-ace-editor-select" aria-label="Select font size">
                             <option value="10px" x-bind:selected="currentFontSize === '10px'">10px</option>
                             <option value="12px" x-bind:selected="currentFontSize === '12px'">12px</option>
                             <option value="14px" x-bind:selected="currentFontSize === '14px'">14px</option>
@@ -161,26 +141,33 @@
             </div>
 
             <!-- ACE Editor -->
-            <div x-ref="aceCodeEditorInner"
-                id="rd-ace-editor-content-{{ $statePath }}"
-                @class([
+            <div class="rd-ace-editor-wrapper">
+                <div x-ref="aceCodeEditorInner" id="rd-ace-editor-content-{{ $statePath }}" @class([
                     'rd-ace-editor-content rd-ace-transition',
                     'rd-ace-content-with-header' => $isHeaderEnabled(),
                     'rd-ace-content-no-header' => !$isHeaderEnabled(),
                     'rd-ace-content-with-toolbar' => $hasToolbar,
                     'rd-ace-content-no-toolbar' => !$hasToolbar,
                     'rd-ace-content-without-status' => !$isStatusBarEnabled(),
-                ])
-                @style([
+                ]) @style([
     $effectiveHeight['height'] ? ('height: ' . $effectiveHeight['height']) : null,
     $effectiveHeight['min-height'] ? ('min-height: ' . $effectiveHeight['min-height']) : null,
     $effectiveHeight['max-height'] ? ('max-height: ' . $effectiveHeight['max-height']) : null,
-])
-                role="application"
-                aria-label="Code editor content"
-                aria-multiline="true"
-                tabindex="0"
-                {{ $getExtraInputAttributeBag() }}></div>
+]) role="application" aria-label="Code editor content"
+                    aria-multiline="true" tabindex="0" {{ $getExtraInputAttributeBag() }}></div>
+
+                <!-- Buy Me Coffee Widget - Bottom Right -->
+                <div class="rd-ace-coffee-widget">
+                    <a href="https://buymeacoffee.com/riodewanto" target="_blank" rel="noopener noreferrer"
+                        class="rd-ace-coffee-widget-link" title="Buy me a coffee! ☕"
+                        aria-label="Support the developer - Buy me a coffee">
+                        <div class="rd-ace-coffee-widget-content">
+                            <img src="https://media0.giphy.com/media/v1.Y2lkPTc5MGI3NjExZnZrejJpbjhwY3YyMm8yamttcHFuM2FtYWYwYjlyaDZpNml6czk1dyZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9cw/TDQOtnWgsBx99cNoyH/giphy.gif"
+                                alt="" class="rd-ace-coffee-widget-gif" loading="lazy">
+                        </div>
+                    </a>
+                </div>
+            </div>
 
             <!-- Validation Feedback -->
             @if ($errors->has($statePath))
