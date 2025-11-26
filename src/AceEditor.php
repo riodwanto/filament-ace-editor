@@ -133,6 +133,8 @@ class AceEditor extends Field
 
     protected bool|Closure|null $showHeader = null;
 
+    protected bool|Closure|null $inputLabelTitle = null;
+
 
     protected array $completions = [];
 
@@ -870,12 +872,30 @@ class AceEditor extends Field
         return $this;
     }
 
+    public function inputLabelTitle(bool|Closure $condition = true): static
+    {
+        $this->inputLabelTitle = $condition;
+
+        return $this;
+    }
+
+    public function usesInputLabelTitle(): bool
+    {
+        return $this->evaluate($this->inputLabelTitle) ?? false;
+    }
+
     /**
      * Get header title
      */
     public function getHeaderTitle(): string
     {
-        return $this->evaluate($this->headerTitle) ?? 'Ace Editor';
+        $customTitle = $this->evaluate($this->headerTitle);
+
+        if ($this->usesInputLabelTitle() && !$customTitle) {
+            return $this->getLabel() ?? 'Ace Editor';
+        }
+
+        return $customTitle ?? 'Ace Editor';
     }
 
     /**
@@ -984,8 +1004,6 @@ class AceEditor extends Field
             'timeout' => $this->editorOptions['extensionTimeout'] ?? 5000,
         ];
     }
-
-
 
 
     // Advanced search configuration
