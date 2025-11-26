@@ -1,4 +1,3 @@
-
 export default function aceEditorComponent({
     state,
     statePath,
@@ -57,7 +56,10 @@ export default function aceEditorComponent({
         statusBarElement: null,
         statusBarState: {
             position: { row: 1, column: 1 },
-            selection: { start: { row: 1, column: 1 }, end: { row: 1, column: 1 } },
+            selection: {
+                start: { row: 1, column: 1 },
+                end: { row: 1, column: 1 },
+            },
             lines: 1,
             characters: 0,
             mode: 'text',
@@ -149,22 +151,25 @@ export default function aceEditorComponent({
         overscrollOptions,
         async init() {
             if (this.$root.closest('.fi-modal')) {
-                await new Promise((resolve) => setTimeout(resolve, 300));
+                await new Promise((resolve) => setTimeout(resolve, 300))
             }
 
             if (this.editor) {
                 try {
-                    this.editor.destroy();
+                    this.editor.destroy()
                 } catch (error) {
-                    console.warn('Error cleaning up existing editor instance:', error);
+                    console.warn(
+                        'Error cleaning up existing editor instance:',
+                        error,
+                    )
                 }
-                this.editor = null;
+                this.editor = null
             }
 
-            await this.initializeEditor();
+            await this.initializeEditor()
 
             // Add global escape key handler for fullscreen
-            this.addGlobalFullscreenEscapeHandler();
+            this.addGlobalFullscreenEscapeHandler()
         },
 
         /**
@@ -172,75 +177,78 @@ export default function aceEditorComponent({
          * This prevents memory leaks by properly disposing of ACE Editor and related resources
          */
         destroy() {
-            if (this.isDestroyed) return;
+            if (this.isDestroyed) return
 
-            this.isDestroyed = true;
+            this.isDestroyed = true
 
             try {
                 if (this.editor) {
                     if (this.editor.session) {
-                        this.editor.session.removeAllListeners();
+                        this.editor.session.removeAllListeners()
                     }
                     if (this.editor.selection) {
-                        this.editor.selection.removeAllListeners();
+                        this.editor.selection.removeAllListeners()
                     }
 
-                    this.editor.destroy();
-                    this.editor = null;
+                    this.editor.destroy()
+                    this.editor = null
                 }
 
                 if (this.observer) {
-                    this.observer.disconnect();
-                    this.observer = null;
+                    this.observer.disconnect()
+                    this.observer = null
                 }
 
-                this.destroyStatusBar();
+                this.destroyStatusBar()
 
                 if (this.isFullscreen) {
-                    this.toggleFullscreen();
+                    this.toggleFullscreen()
                 }
 
                 // Clean up global escape handler
                 if (this._globalEscapeHandler) {
-                    document.removeEventListener('keydown', this._globalEscapeHandler, true);
-                    this._globalEscapeHandler = null;
+                    document.removeEventListener(
+                        'keydown',
+                        this._globalEscapeHandler,
+                        true,
+                    )
+                    this._globalEscapeHandler = null
                 }
 
-                this.cleanupLoadedScripts();
+                this.cleanupLoadedScripts()
 
-                Object.values(this.debounceTimers).forEach(timer => {
-                    if (timer) clearTimeout(timer);
-                });
+                Object.values(this.debounceTimers).forEach((timer) => {
+                    if (timer) clearTimeout(timer)
+                })
 
-                this.eventListeners = [];
-                this.loadedScripts = [];
-                this.statusBarElements = {};
+                this.eventListeners = []
+                this.loadedScripts = []
+                this.statusBarElements = {}
 
                 if (this.printMarginState.throttledUpdate) {
-                    cancelAnimationFrame(this.printMarginState.throttledUpdate);
-                    this.printMarginState.throttledUpdate = null;
+                    cancelAnimationFrame(this.printMarginState.throttledUpdate)
+                    this.printMarginState.throttledUpdate = null
                 }
 
                 if (this.gotoLineState.animationFrame) {
-                    cancelAnimationFrame(this.gotoLineState.animationFrame);
-                    this.gotoLineState.animationFrame = null;
+                    cancelAnimationFrame(this.gotoLineState.animationFrame)
+                    this.gotoLineState.animationFrame = null
                 }
 
-                this.undoRedoState.operationQueue = [];
-                this.undoRedoState.isProcessingQueue = false;
+                this.undoRedoState.operationQueue = []
+                this.undoRedoState.isProcessingQueue = false
 
-                this.caseConversionState.conversionCache.clear();
-                this.caseConversionState.operationInProgress = false;
+                this.caseConversionState.conversionCache.clear()
+                this.caseConversionState.operationInProgress = false
 
                 if (this.operationState.batchTimeout) {
-                    clearTimeout(this.operationState.batchTimeout);
-                    this.operationState.batchTimeout = null;
+                    clearTimeout(this.operationState.batchTimeout)
+                    this.operationState.batchTimeout = null
                 }
-                this.operationState.operationQueue = [];
-                this.operationState.isBatching = false;
-
+                this.operationState.operationQueue = []
+                this.operationState.isBatching = false
             } catch (error) {
-                console.error('Error during ACE editor cleanup:', error);
+                console.error('Error during ACE editor cleanup:', error)
             }
         },
 
@@ -249,30 +257,30 @@ export default function aceEditorComponent({
          * Prevents DOM pollution and memory retention
          */
         cleanupLoadedScripts() {
-            this.loadedScripts.forEach(scriptUrl => {
-                const scripts = document.querySelectorAll(`script[src="${scriptUrl}"]`);
-                scripts.forEach(script => {
+            this.loadedScripts.forEach((scriptUrl) => {
+                const scripts = document.querySelectorAll(
+                    `script[src="${scriptUrl}"]`,
+                )
+                scripts.forEach((script) => {
                     if (script.parentNode) {
-                        script.parentNode.removeChild(script);
+                        script.parentNode.removeChild(script)
                     }
-                });
-            });
-            this.loadedScripts = [];
+                })
+            })
+            this.loadedScripts = []
         },
 
         async initializeEditor() {
             try {
-                await this.loadScript(aceUrl);
+                await this.loadScript(aceUrl)
 
-                await this.loadExtensionsEnhanced();
-
-                console.log('Extension Loading Statistics:', this.getExtensionLoadingStats());
+                await this.loadExtensionsEnhanced()
 
                 Object.entries(config).forEach(([configKey, configValue]) => {
-                    ace.config.set(configKey, configValue);
-                });
+                    ace.config.set(configKey, configValue)
+                })
 
-                this.editor = ace.edit(this.$refs.aceCodeEditorInner);
+                this.editor = ace.edit(this.$refs.aceCodeEditorInner)
 
                 const mergedOptions = {
                     animatedScroll: false,
@@ -287,86 +295,90 @@ export default function aceEditorComponent({
                     fontSize: this.currentFontSize,
                     showGutter: options.showGutter !== false,
                     showLineNumbers: options.showLineNumbers !== false,
-                };
-
-                if (mergedOptions.cursorStyle) {
-                    console.log('🎯 Applying cursorStyle:', mergedOptions.cursorStyle);
                 }
-                console.log('📝 Full merged options:', mergedOptions);
 
-                this.editor.setOptions(mergedOptions);
+                this.editor.setOptions(mergedOptions)
 
                 if (mergedOptions.cursorStyle) {
                     setTimeout(() => {
-                        const appliedStyle = this.editor.getOption('cursorStyle');
-                        console.log('✅ CursorStyle verification - applied:', appliedStyle, 'expected:', mergedOptions.cursorStyle);
+                        const appliedStyle =
+                            this.editor.getOption('cursorStyle')
 
                         if (appliedStyle !== mergedOptions.cursorStyle) {
-                            console.warn('⚠️ CursorStyle mismatch! Trying direct setOption...');
-                            this.editor.setOption('cursorStyle', mergedOptions.cursorStyle);
+                            console.warn(
+                                '⚠️ CursorStyle mismatch! Trying direct setOption...',
+                            )
+                            this.editor.setOption(
+                                'cursorStyle',
+                                mergedOptions.cursorStyle,
+                            )
                         }
-                    }, 100);
+                    }, 100)
                 }
 
-                this.changeWordWrap(this.currentWordWrap);
+                this.changeWordWrap(this.currentWordWrap)
 
-                this.applyOverscrollSettings();
+                this.applyOverscrollSettings()
 
-                this.editor.session.setValue(this.state || placeholder);
+                this.editor.session.setValue(this.state || placeholder)
 
-                this.applyInitialTheme();
-                this.observeDarkModeChanges();
+                this.applyInitialTheme()
+                this.observeDarkModeChanges()
 
-                this.setupPerformanceOptimizations();
+                this.setupPerformanceOptimizations()
 
-                this.setupReliabilityImprovements();
-                this.$watch('state', Alpine.debounce(() => {
-                    if (this.isDestroyed || !this.editor) return;
+                this.setupReliabilityImprovements()
+                this.$watch(
+                    'state',
+                    Alpine.debounce(() => {
+                        if (this.isDestroyed || !this.editor) return
 
-                    if (!this.shouldUpdateState) {
-                        this.shouldUpdateState = true;
-                        return;
-                    }
+                        if (!this.shouldUpdateState) {
+                            this.shouldUpdateState = true
+                            return
+                        }
 
-                    if (this.editor.isFocused()) return;
+                        if (this.editor.isFocused()) return
 
-                    this.editor.session.setValue(this.state || placeholder);
-                }, 100));
+                        this.editor.session.setValue(this.state || placeholder)
+                    }, 100),
+                )
 
-                this.editor.session.on('change', Alpine.debounce(() => {
-                    if (this.isDestroyed || !this.editor) return;
+                this.editor.session.on(
+                    'change',
+                    Alpine.debounce(() => {
+                        if (this.isDestroyed || !this.editor) return
 
-                    const currentValue = this.editor.getValue();
-                    this.state = currentValue;
-                    this.shouldUpdateState = false;
+                        const currentValue = this.editor.getValue()
+                        this.state = currentValue
+                        this.shouldUpdateState = false
 
-                    this.updateToolbarState(false);
-
-                }, 150));
+                        this.updateToolbarState(false)
+                    }, 150),
+                )
 
                 if (this.enableCustomCompletions) {
-                    this.setupCustomCompletions();
+                    this.setupCustomCompletions()
                 }
 
-                this.initToolbar();
+                this.initToolbar()
 
-                this.initializeExpensiveStateCache();
+                this.initializeExpensiveStateCache()
 
-                this.optimizeUndoManager();
+                this.optimizeUndoManager()
 
                 setTimeout(() => {
-                    this.updateToolbarState();
-                }, 50);
+                    this.updateToolbarState()
+                }, 50)
 
                 if (this.showStatusBar) {
-                    this.initStatusBar();
+                    this.initStatusBar()
                 }
 
-                this.initAccessibility();
-
+                this.initAccessibility()
             } catch (error) {
-                console.error('ACE Editor initialization failed:', error);
-                this.handleInitializationError(error);
+                console.error('ACE Editor initialization failed:', error)
+                this.handleInitializationError(error)
             }
         },
 
@@ -375,9 +387,12 @@ export default function aceEditorComponent({
          * Follows Filament's error boundary patterns for maximum reliability
          */
         handleInitializationError(error) {
-            console.error('ACE Editor initialization failed, falling back to basic textarea:', error);
+            console.error(
+                'ACE Editor initialization failed, falling back to basic textarea:',
+                error,
+            )
 
-            const container = this.$refs?.aceCodeEditorInner;
+            const container = this.$refs?.aceCodeEditorInner
             if (container) {
                 // Create a user-friendly fallback interface
                 container.innerHTML = `
@@ -402,38 +417,48 @@ export default function aceEditorComponent({
                         ></textarea>
                         <details class="mt-2 text-xs text-gray-500">
                             <summary class="cursor-pointer hover:text-gray-700">Technical Details</summary>
-                            <pre class="mt-1 p-2 bg-gray-50 rounded text-xs overflow-auto">${error.message || 'Unknown error occurred'}</pre>
+                            <pre class="mt-1 p-2 bg-gray-50 rounded text-xs overflow-auto">${
+                                error.message || 'Unknown error occurred'
+                            }</pre>
                         </details>
                     </div>
-                `;
+                `
             }
 
             // Mark as fallback mode for future reference
-            this.isFallbackMode = true;
-            this.editor = null;
+            this.isFallbackMode = true
+            this.editor = null
         },
 
-  
         /**
          * Enhanced script loading with retry mechanism and better error handling
          */
         async loadScriptWithRetry(url, maxRetries = null, retryDelay = null) {
             // Use configuration defaults if not provided
-            maxRetries = maxRetries || this.extensionLoadingConfig.maxRetries || 3;
-            retryDelay = retryDelay || this.extensionLoadingConfig.retryDelay || 1000;
+            maxRetries =
+                maxRetries || this.extensionLoadingConfig.maxRetries || 3
+            retryDelay =
+                retryDelay || this.extensionLoadingConfig.retryDelay || 1000
             for (let attempt = 1; attempt <= maxRetries; attempt++) {
                 try {
-                    await this.loadScript(url);
-                    return; // Success, exit retry loop
+                    await this.loadScript(url)
+                    return // Success, exit retry loop
                 } catch (error) {
-                    console.warn(`Attempt ${attempt} failed to load script: ${url}`, error);
+                    console.warn(
+                        `Attempt ${attempt} failed to load script: ${url}`,
+                        error,
+                    )
 
                     if (attempt === maxRetries) {
-                        throw new Error(`Failed to load script after ${maxRetries} attempts: ${url}`);
+                        throw new Error(
+                            `Failed to load script after ${maxRetries} attempts: ${url}`,
+                        )
                     }
 
                     // Wait before retry
-                    await new Promise(resolve => setTimeout(resolve, retryDelay));
+                    await new Promise((resolve) =>
+                        setTimeout(resolve, retryDelay),
+                    )
                 }
             }
         },
@@ -443,104 +468,121 @@ export default function aceEditorComponent({
          */
         async loadExtensionsEnhanced() {
             if (!extensions || Object.keys(extensions).length === 0) {
-                console.log('No extensions to load');
-                return;
+                return
             }
 
-            const extensionEntries = Object.entries(extensions);
-            const useParallelLoading = this.extensionLoadingConfig.parallelLoading !== false;
-            const maxRetries = this.extensionLoadingConfig.maxRetries || 3;
-            const timeout = this.extensionLoadingConfig.timeout || 30000;
+            const extensionEntries = Object.entries(extensions)
+            const useParallelLoading =
+                this.extensionLoadingConfig.parallelLoading !== false
+            const maxRetries = this.extensionLoadingConfig.maxRetries || 3
+            const timeout = this.extensionLoadingConfig.timeout || 30000
 
-            console.log(`Loading ${extensionEntries.length} extensions (parallel: ${useParallelLoading}, maxRetries: ${maxRetries}, timeout: ${timeout}ms)`);
+            const loadPromises = extensionEntries.map(
+                async ([extensionName, extensionUrl]) => {
+                    try {
+                        await this.loadScriptWithRetry(extensionUrl, maxRetries)
+                        return {
+                            name: extensionName,
+                            url: extensionUrl,
+                            status: 'loaded',
+                        }
+                    } catch (error) {
+                        console.error(
+                            `Failed to load extension: ${extensionName}`,
+                            error,
+                        )
+                        return {
+                            name: extensionName,
+                            url: extensionUrl,
+                            status: 'failed',
+                            error,
+                        }
+                    }
+                },
+            )
 
-            const loadPromises = extensionEntries.map(async ([extensionName, extensionUrl]) => {
-                try {
-                    console.log(`Loading extension: ${extensionName} from ${extensionUrl}`);
-                    await this.loadScriptWithRetry(extensionUrl, maxRetries);
-                    console.log(`Successfully loaded extension: ${extensionName}`);
-                    return { name: extensionName, url: extensionUrl, status: 'loaded' };
-                } catch (error) {
-                    console.error(`Failed to load extension: ${extensionName}`, error);
-                    return { name: extensionName, url: extensionUrl, status: 'failed', error };
-                }
-            });
-
-            let results;
+            let results
             if (useParallelLoading) {
                 // Load all extensions in parallel
-                results = await Promise.allSettled(loadPromises);
+                results = await Promise.allSettled(loadPromises)
             } else {
                 // Load extensions sequentially
-                results = [];
+                results = []
                 for (const loadPromise of loadPromises) {
-                    const result = await Promise.allSettled([loadPromise]);
-                    results.push(result[0]);
+                    const result = await Promise.allSettled([loadPromise])
+                    results.push(result[0])
                 }
             }
 
-            // Log results
-            const loaded = results.filter(r => r.value?.status === 'loaded').map(r => r.value.name);
-            const failed = results.filter(r => r.value?.status === 'failed').map(r => r.value);
-
-            if (loaded.length > 0) {
-                console.log(`Successfully loaded extensions: ${loaded.join(', ')}`);
-            }
+            const loaded = results
+                .filter((r) => r.value?.status === 'loaded')
+                .map((r) => r.value.name)
+            const failed = results
+                .filter((r) => r.value?.status === 'failed')
+                .map((r) => r.value)
 
             if (failed.length > 0) {
-                console.error(`Failed to load extensions: ${failed.map(f => f.name).join(', ')}`);
-                failed.forEach(f => {
-                    console.error(`Extension ${f.name} error:`, f.error);
-                });
+                console.error(
+                    `Failed to load extensions: ${failed
+                        .map((f) => f.name)
+                        .join(', ')}`,
+                )
+                failed.forEach((f) => {
+                    console.error(`Extension ${f.name} error:`, f.error)
+                })
             }
 
             // Return loaded extensions for potential further processing
-            return loaded;
+            return loaded
         },
 
-  
         /**
          * Get loading statistics for debugging
          */
         getExtensionLoadingStats() {
-            const extensionEntries = Object.entries(extensions || {});
-            const total = extensionEntries.length;
+            const extensionEntries = Object.entries(extensions || {})
+            const total = extensionEntries.length
 
             // Count only extension scripts that were actually loaded
-            const extensionUrls = extensionEntries.map(([_, url]) => url);
-            const loaded = this.loadedScripts.filter(scriptUrl =>
-                extensionUrls.some(extUrl => scriptUrl.includes(extUrl.split('/').pop()))
-            ).length;
+            const extensionUrls = extensionEntries.map(([_, url]) => url)
+            const loaded = this.loadedScripts.filter((scriptUrl) =>
+                extensionUrls.some((extUrl) =>
+                    scriptUrl.includes(extUrl.split('/').pop()),
+                ),
+            ).length
 
             return {
                 total,
                 loaded,
                 pending: Math.max(0, total - loaded), // Prevent negative values
-                successRate: total > 0 ? Math.min(100, (loaded / total * 100)).toFixed(1) : 0 // Cap at 100%
-            };
+                successRate:
+                    total > 0
+                        ? Math.min(100, (loaded / total) * 100).toFixed(1)
+                        : 0, // Cap at 100%
+            }
         },
 
         /**
-       * Dynamically loads a JavaScript file from the given URL
-       * Returns a Promise that resolves when the script loads successfully
-       */
+         * Dynamically loads a JavaScript file from the given URL
+         * Returns a Promise that resolves when the script loads successfully
+         */
         loadScript(url) {
             return new Promise((resolve, reject) => {
                 // Check if script is already loaded
                 if (this.loadedScripts.includes(url)) {
-                    resolve();
-                    return;
+                    resolve()
+                    return
                 }
 
-                const script = document.createElement('script');
-                script.src = url;
+                const script = document.createElement('script')
+                script.src = url
                 script.onload = () => {
-                    this.loadedScripts.push(url);
-                    resolve();
-                };
-                script.onerror = reject;
-                document.head.appendChild(script);
-            });
+                    this.loadedScripts.push(url)
+                    resolve()
+                }
+                script.onerror = reject
+                document.head.appendChild(script)
+            })
         },
 
         /**
@@ -549,9 +591,9 @@ export default function aceEditorComponent({
          */
         applyInitialTheme() {
             if (!disableDarkTheme) {
-                this.setTheme();
+                this.setTheme()
             } else if (this.editor) {
-                this.editor.setTheme(options.theme);
+                this.editor.setTheme(options.theme)
             }
         },
 
@@ -560,11 +602,14 @@ export default function aceEditorComponent({
          * Automatically switches editor theme when system theme changes
          */
         observeDarkModeChanges() {
-            if (disableDarkTheme) return;
+            if (disableDarkTheme) return
 
-            const targetElement = document.querySelector('html');
-            this.observer = new MutationObserver(() => this.setTheme());
-            this.observer.observe(targetElement, { attributes: true, attributeFilter: ['class'] });
+            const targetElement = document.querySelector('html')
+            this.observer = new MutationObserver(() => this.setTheme())
+            this.observer.observe(targetElement, {
+                attributes: true,
+                attributeFilter: ['class'],
+            })
         },
 
         /**
@@ -572,81 +617,91 @@ export default function aceEditorComponent({
          * Checks the HTML element for 'dark' class to determine theme
          */
         setTheme() {
-            if (!this.editor) return;
+            if (!this.editor) return
 
-            const isDarkMode = document.querySelector('html').classList.contains('dark');
-            const theme = isDarkMode ? (darkTheme || options.theme) : options.theme;
-            this.editor.setTheme(theme);
+            const isDarkMode = document
+                .querySelector('html')
+                .classList.contains('dark')
+            const theme = isDarkMode
+                ? darkTheme || options.theme
+                : options.theme
+            this.editor.setTheme(theme)
         },
 
         /**
          * Setup custom completions and snippets for the editor
          */
         setupCustomCompletions() {
-            if (!this.editor) return;
+            if (!this.editor) return
 
             // Enable live autocompletion if not already enabled
             this.editor.setOptions({
                 enableBasicAutocompletion: true,
                 enableLiveAutocompletion: true,
                 enableSnippets: true,
-            });
+            })
 
             // Setup custom completions provider
-            const langTools = ace.require('ace/ext/language_tools');
+            const langTools = ace.require('ace/ext/language_tools')
 
             // Add custom completions
             if (this.completions && this.completions.length > 0) {
-                const self = this;
+                const self = this
                 const customCompleter = {
-                    getCompletions: function(_editor, _session, _pos, _prefix, callback) {
-                        const completions = [];
+                    getCompletions: function (
+                        _editor,
+                        _session,
+                        _pos,
+                        _prefix,
+                        callback,
+                    ) {
+                        const completions = []
 
                         // Add configured completions
-                        self.completions.forEach(completion => {
+                        self.completions.forEach((completion) => {
                             completions.push({
                                 caption: completion.caption,
                                 value: completion.value,
                                 meta: completion.meta || 'Custom',
-                                score: completion.score || 1000
-                            });
-                        });
+                                score: completion.score || 1000,
+                            })
+                        })
 
-                        callback(null, completions);
-                    }
-                };
+                        callback(null, completions)
+                    },
+                }
 
-                langTools.addCompleter(customCompleter);
+                langTools.addCompleter(customCompleter)
             }
 
             // Add custom snippets
             if (this.snippets && this.snippets.length > 0) {
-                Object.keys(this.snippets).forEach(trigger => {
-                    const snippetContent = this.snippets[trigger];
+                Object.keys(this.snippets).forEach((trigger) => {
+                    const snippetContent = this.snippets[trigger]
                     langTools.addSnippet({
                         name: trigger,
                         trigger: trigger,
-                        content: snippetContent
-                    });
-                });
+                        content: snippetContent,
+                    })
+                })
             }
         },
 
         // Toolbar Methods
         executeToolbarAction(command, event) {
-            if (!this.editor || !this.hasToolbar) return;
+            if (!this.editor || !this.hasToolbar) return
 
             // Prevent form submission and event bubbling
             if (event) {
-                event.preventDefault();
-                event.stopPropagation();
+                event.preventDefault()
+                event.stopPropagation()
             }
 
             const actions = {
-                'undo': () => this.performOptimizedUndo(),
-                'redo': () => this.performOptimizedRedo(),
-                'find': () => this.editor.execCommand('find'),
-                'replace': () => this.editor.execCommand('replace'),
+                undo: () => this.performOptimizedUndo(),
+                redo: () => this.performOptimizedRedo(),
+                find: () => this.editor.execCommand('find'),
+                replace: () => this.editor.execCommand('replace'),
                 'goto-line': () => this.goToLine(),
                 'toggle-comment': () => this.toggleCommentLines(),
                 'toggle-fold': () => this.toggleCurrentFold(),
@@ -655,174 +710,223 @@ export default function aceEditorComponent({
                 'convert-uppercase': () => this.convertToUpperCase(),
                 'convert-lowercase': () => this.convertToLowerCase(),
                 'toggle-print-margin': () => this.togglePrintMargin(),
-            };
+            }
 
-            const action = actions[command];
+            const action = actions[command]
             if (action) {
-                action();
-                this.updateToolbarState();
+                action()
+                this.updateToolbarState()
             }
         },
 
         toggleCurrentFold() {
-            const session = this.editor.getSession();
-                const cursor = this.editor.getCursorPosition();
+            const session = this.editor.getSession()
+            const cursor = this.editor.getCursorPosition()
 
-                // Use efficient fold state detection to determine action
-                const foldState = this.getEfficientFoldState();
+            // Use efficient fold state detection to determine action
+            const foldState = this.getEfficientFoldState()
 
-                try {
-                    if (foldState.isInsideFold) {
-                        // Cursor is inside a folded region, unfold it
-                        const fold = session.getFoldAt(cursor.row, cursor.column, 1);
-                        if (fold) {
-                            session.unfold(fold);
-                        } else {
-                            // Fallback: unfold the current row if it's folded
-                            if (session.isRowFolded(cursor.row)) {
-                                const range = session.getFoldWidgetRange(cursor.row, "all");
-                                if (range) {
-                                    session.unfold(range);
-                                }
-                            }
-                        }
-                        return;
-                    }
+            try {
+                // Check if session supports folding
+                const hasFoldSupport =
+                    session.getFoldWidget &&
+                    typeof session.getFoldWidget === 'function'
+                if (!hasFoldSupport) {
+                    // Session doesn't support folding, just use fallback execCommand
+                    this.editor.execCommand('toggleFoldWidget')
+                    return
+                }
 
-                    // Get the fold widget for the current line
-                    const foldWidget = session.getFoldWidget(cursor.row);
-
-                    if (foldWidget === "start") {
-                        // Current line can be folded, toggle it
-                        const range = session.getFoldWidgetRange(cursor.row, "all");
-                        if (range) {
-                            if (session.isRowFolded(cursor.row)) {
-                                // Line is already folded, unfold it
-                                session.unfold(range);
-                            } else {
-                                // Line can be folded, fold it
-                                session.addFold("...", range);
-                            }
-                        }
-                    } else if (foldWidget === "end") {
-                        // Cursor is on the end of a fold, find the start and unfold
-                        const range = session.getFoldWidgetRange(cursor.row, "all");
-                        if (range) {
-                            session.unfold(range);
-                        }
+                if (foldState.isInsideFold) {
+                    // Cursor is inside a folded region, unfold it
+                    const fold = session.getFoldAt
+                        ? session.getFoldAt(cursor.row, cursor.column, 1)
+                        : null
+                    if (fold) {
+                        session.unfold(fold)
                     } else {
-                        // Search upwards for the nearest foldable line (optimized with max iterations)
-                        let line = cursor.row - 1;
-                        let maxSearch = 10; // Limit search for performance
-                        while (line >= 0 && maxSearch > 0) {
-                            const widget = session.getFoldWidget(line);
-                            if (widget === "start") {
-                                const range = session.getFoldWidgetRange(line, "all");
-                                if (range) {
-                                    if (session.isRowFolded(line)) {
-                                        // Already folded, unfold it
-                                        session.unfold(range);
-                                    } else {
-                                        // Not folded, fold it
-                                        session.addFold("...", range);
-                                    }
-                                    break;
-                                }
+                        // Fallback: unfold the current row if it's folded
+                        if (
+                            session.isRowFolded &&
+                            session.isRowFolded(cursor.row)
+                        ) {
+                            const range = session.getFoldWidgetRange
+                                ? session.getFoldWidgetRange(cursor.row, 'all')
+                                : null
+                            if (range) {
+                                session.unfold(range)
                             }
-                            line--;
-                            maxSearch--;
                         }
                     }
+                    return
+                }
 
-                    // Invalidate fold cache after operation
-                    this.lastFoldState.cursorRow = -1;
-                    this.lastFoldState.cursorColumn = -1;
+                // Get the fold widget for the current line
+                const foldWidget = session.getFoldWidget(cursor.row)
 
-                } catch (error) {
-                    console.error('Error toggling fold:', error);
-                    // Fallback to execCommand if all else fails
-                    try {
-                        this.editor.execCommand('toggleFoldWidget');
-                        // Invalidate cache after fallback too
-                        this.lastFoldState.cursorRow = -1;
-                        this.lastFoldState.cursorColumn = -1;
-                    } catch (fallbackError) {
-                        console.error('Fallback fold command failed:', fallbackError);
+                if (foldWidget === 'start') {
+                    // Current line can be folded, toggle it
+                    const range = session.getFoldWidgetRange
+                        ? session.getFoldWidgetRange(cursor.row, 'all')
+                        : null
+                    if (range) {
+                        const isRowFolded = session.isRowFolded
+                            ? session.isRowFolded(cursor.row)
+                            : false
+                        if (isRowFolded) {
+                            // Line is already folded, unfold it
+                            session.unfold(range)
+                        } else {
+                            // Line can be folded, fold it
+                            session.addFold('...', range)
+                        }
+                    }
+                } else if (foldWidget === 'end') {
+                    // Cursor is on the end of a fold, find the start and unfold
+                    const range = session.getFoldWidgetRange
+                        ? session.getFoldWidgetRange(cursor.row, 'all')
+                        : null
+                    if (range) {
+                        session.unfold(range)
+                    }
+                } else {
+                    // Search upwards for the nearest foldable line (optimized with max iterations)
+                    let line = cursor.row - 1
+                    let maxSearch = 10 // Limit search for performance
+                    while (line >= 0 && maxSearch > 0) {
+                        const widget = session.getFoldWidget(line)
+                        if (widget === 'start') {
+                            const range = session.getFoldWidgetRange
+                                ? session.getFoldWidgetRange(line, 'all')
+                                : null
+                            if (range) {
+                                const isRowFolded = session.isRowFolded
+                                    ? session.isRowFolded(line)
+                                    : false
+                                if (isRowFolded) {
+                                    // Already folded, unfold it
+                                    session.unfold(range)
+                                } else {
+                                    // Not folded, fold it
+                                    session.addFold('...', range)
+                                }
+                                break
+                            }
+                        }
+                        line--
+                        maxSearch--
                     }
                 }
-            },
+
+                // Invalidate fold cache after operation
+                this.lastFoldState.cursorRow = -1
+                this.lastFoldState.cursorColumn = -1
+            } catch (error) {
+                console.error('Error toggling fold:', error)
+                // Fallback to execCommand if all else fails
+                try {
+                    this.editor.execCommand('toggleFoldWidget')
+                    // Invalidate cache after fallback too
+                    this.lastFoldState.cursorRow = -1
+                    this.lastFoldState.cursorColumn = -1
+                } catch (fallbackError) {
+                    console.error(
+                        'Fallback fold command failed:',
+                        fallbackError,
+                    )
+                }
+            }
+        },
 
         toggleCommentLines() {
-            const editor = this.editor;
-            const session = editor.getSession();
-            const selection = editor.getSelection();
-            const range = selection.getRange();
+            const editor = this.editor
+            const session = editor.getSession()
+            const selection = editor.getSelection()
+            const range = selection.getRange()
 
             if (range.isEmpty()) {
                 // No selection, toggle current line
-                const row = selection.getCursor().row;
-                this.toggleLineComment(session, row, row);
+                const row = selection.getCursor().row
+                this.toggleLineComment(session, row, row)
             } else {
                 // Multiple lines selected, toggle all
-                this.toggleLineComment(session, range.start.row, range.end.row);
+                this.toggleLineComment(session, range.start.row, range.end.row)
             }
         },
 
         toggleLineComment(session, startRow, endRow) {
             // Get comment prefix for current mode
-            const commentInfo = this.getCommentPrefix(session);
-            if (!commentInfo) return;
+            const commentInfo = this.getCommentPrefix(session)
+            if (!commentInfo) return
 
-            const commentPrefix = commentInfo.prefix;
-            const commentSuffix = commentInfo.suffix || '';
+            const commentPrefix = commentInfo.prefix
+            const commentSuffix = commentInfo.suffix || ''
 
             // Check if lines are commented
-            let linesAreCommented = true;
+            let linesAreCommented = true
             for (let i = startRow; i <= endRow; i++) {
-                const line = session.getLine(i);
+                const line = session.getLine(i)
                 if (line.trim() && !line.trim().startsWith(commentPrefix)) {
-                    linesAreCommented = false;
-                    break;
+                    linesAreCommented = false
+                    break
                 }
             }
 
             // Toggle comments
             for (let i = startRow; i <= endRow; i++) {
-                const line = session.getLine(i);
+                const line = session.getLine(i)
                 if (linesAreCommented) {
                     // Remove comments
-                    let uncommentedLine = line;
+                    let uncommentedLine = line
                     if (commentSuffix) {
                         // Handle comments with both prefix and suffix (like HTML comments)
-                        uncommentedLine = line.replace(new RegExp(`^\\s*${commentPrefix}\\s*(.*?)\\s*${commentSuffix.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\s?$`), '$1');
+                        uncommentedLine = line.replace(
+                            new RegExp(
+                                `^\\s*${commentPrefix}\\s*(.*?)\\s*${commentSuffix.replace(
+                                    /[.*+?^${}()|[\]\\]/g,
+                                    '\\$&',
+                                )}\\s?$`,
+                            ),
+                            '$1',
+                        )
                     } else {
                         // Handle simple prefix comments (like // or #)
-                        uncommentedLine = line.replace(new RegExp(`^\\s*${commentPrefix}\\s?`), '');
+                        uncommentedLine = line.replace(
+                            new RegExp(`^\\s*${commentPrefix}\\s?`),
+                            '',
+                        )
                     }
-                    session.replace({
-                        start: {row: i, column: 0},
-                        end: {row: i, column: line.length}
-                    }, uncommentedLine);
+                    session.replace(
+                        {
+                            start: { row: i, column: 0 },
+                            end: { row: i, column: line.length },
+                        },
+                        uncommentedLine,
+                    )
                 } else {
                     // Add comments
-                    let commentedLine;
+                    let commentedLine
                     if (commentSuffix) {
                         // Handle comments with both prefix and suffix (like HTML comments)
-                        commentedLine = commentPrefix + ' ' + line + ' ' + commentSuffix;
+                        commentedLine =
+                            commentPrefix + ' ' + line + ' ' + commentSuffix
                     } else {
                         // Handle simple prefix comments (like // or #)
-                        commentedLine = commentPrefix + ' ' + line;
+                        commentedLine = commentPrefix + ' ' + line
                     }
-                    session.replace({
-                        start: {row: i, column: 0},
-                        end: {row: i, column: line.length}
-                    }, commentedLine);
+                    session.replace(
+                        {
+                            start: { row: i, column: 0 },
+                            end: { row: i, column: line.length },
+                        },
+                        commentedLine,
+                    )
                 }
             }
         },
 
         getCommentPrefix(session) {
-            const mode = session.getMode().$id;
+            const mode = session.getMode().$id
             const commentMap = {
                 'ace/mode/php': { prefix: '//', suffix: '' },
                 'ace/mode/javascript': { prefix: '//', suffix: '' },
@@ -842,56 +946,56 @@ export default function aceEditorComponent({
                 'ace/mode/scss': { prefix: '//', suffix: '' },
                 'ace/mode/sass': { prefix: '//', suffix: '' },
                 'ace/mode/less': { prefix: '//', suffix: '' },
-            };
-            return commentMap[mode] || { prefix: '//', suffix: '' };
+            }
+            return commentMap[mode] || { prefix: '//', suffix: '' }
         },
 
         toggleShowInvisibles(mode = 'all') {
-            const current = this.editor.getShowInvisibles();
+            const current = this.editor.getShowInvisibles()
 
             // Handle granular modes for better performance
-            let newState;
+            let newState
             switch (mode) {
                 case 'all':
-                    newState = current ? false : true;
-                    break;
+                    newState = current ? false : true
+                    break
                 case 'spaces':
-                    newState = current === 'spaces' ? false : 'spaces';
-                    break;
+                    newState = current === 'spaces' ? false : 'spaces'
+                    break
                 case 'tabs':
-                    newState = current === 'tabs' ? false : 'tabs';
-                    break;
+                    newState = current === 'tabs' ? false : 'tabs'
+                    break
                 case 'eol':
-                    newState = current === 'eol' ? false : 'eol';
-                    break;
+                    newState = current === 'eol' ? false : 'eol'
+                    break
                 default:
-                    newState = current ? false : true;
+                    newState = current ? false : true
             }
 
             // Set the new state
-            this.editor.setShowInvisibles(newState);
+            this.editor.setShowInvisibles(newState)
 
             // Update both the expensive state cache and toolbar state immediately
-            this.lastExpensiveState.showInvisibles = newState;
-            this.lastExpensiveState.lastCheckTime = Date.now();
-            this.updateToolbarState(true); // Force immediate update for toggle actions
+            this.lastExpensiveState.showInvisibles = newState
+            this.lastExpensiveState.lastCheckTime = Date.now()
+            this.updateToolbarState(true) // Force immediate update for toggle actions
         },
 
         toggleWordWrap() {
-            const session = this.editor.getSession();
-            const current = session.getUseWrapMode();
-            session.setUseWrapMode(!current);
+            const session = this.editor.getSession()
+            const current = session.getUseWrapMode()
+            session.setUseWrapMode(!current)
 
             // Update toolbar state immediately for responsive UI
-            this.updateToolbarState();
+            this.updateToolbarState()
         },
 
         convertToUpperCase() {
-            this.convertCaseOptimized('toUpperCase');
+            this.convertCaseOptimized('toUpperCase')
         },
 
         convertToLowerCase() {
-            this.convertCaseOptimized('toLowerCase');
+            this.convertCaseOptimized('toLowerCase')
         },
 
         /**
@@ -899,112 +1003,143 @@ export default function aceEditorComponent({
          * Based on ACE Editor internal implementation research
          */
         convertCaseOptimized(conversionType) {
-            const startTime = performance.now();
-            const state = this.caseConversionState;
+            const startTime = performance.now()
+            const state = this.caseConversionState
 
             // Prevent concurrent operations
             if (state.operationInProgress) {
-                return;
+                return
             }
 
-            state.operationInProgress = true;
+            state.operationInProgress = true
 
             try {
                 // Get current selection efficiently
-                const session = this.editor.getSession();
-                const originalRange = this.editor.getSelectionRange();
+                const session = this.editor.getSession()
+                const originalRange = this.editor.getSelectionRange()
 
                 // Auto-select word if no selection (following ACE's pattern)
                 if (this.editor.getSelection().isEmpty()) {
-                    this.editor.getSelection().selectWord();
+                    this.editor.getSelection().selectWord()
                 }
 
-                const range = this.editor.getSelectionRange();
-                const text = session.getTextRange(range);
+                const range = this.editor.getSelectionRange()
+                const text = session.getTextRange(range)
 
                 // Skip if no text to convert
                 if (!text || text.length === 0) {
-                    this.editor.getSelection().setSelectionRange(originalRange);
-                    return;
+                    this.editor.getSelection().setSelectionRange(originalRange)
+                    return
                 }
 
                 // Create cache key for repeated conversions
-                const cacheKey = `${text}:${conversionType}`;
+                const cacheKey = `${text}:${conversionType}`
 
                 // Check cache first for performance
                 if (state.conversionCache.has(cacheKey)) {
-                    const cachedResult = state.conversionCache.get(cacheKey);
-                    session.replace(range, cachedResult);
+                    const cachedResult = state.conversionCache.get(cacheKey)
+                    session.replace(range, cachedResult)
 
-                    this.editor.getSelection().setSelectionRange(originalRange);
-                    return;
+                    this.editor.getSelection().setSelectionRange(originalRange)
+                    return
                 }
 
                 // For large text blocks, use requestAnimationFrame to prevent blocking
                 if (text.length > state.largeTextThreshold) {
-                    this.performLargeTextConversion(range, text, conversionType, originalRange, cacheKey);
+                    this.performLargeTextConversion(
+                        range,
+                        text,
+                        conversionType,
+                        originalRange,
+                        cacheKey,
+                    )
                 } else {
                     // Direct conversion for smaller text blocks
-                    const convertedText = conversionType === 'toUpperCase' ?
-                        text.toUpperCase() : text.toLowerCase();
+                    const convertedText =
+                        conversionType === 'toUpperCase'
+                            ? text.toUpperCase()
+                            : text.toLowerCase()
 
                     // Batch operation with undo management optimization
-                    this.performOptimizedReplacement(range, convertedText, originalRange, cacheKey);
+                    this.performOptimizedReplacement(
+                        range,
+                        convertedText,
+                        originalRange,
+                        cacheKey,
+                    )
                 }
-
-  
             } catch (error) {
-                console.warn(`Case conversion failed (${conversionType}):`, error);
+                console.warn(
+                    `Case conversion failed (${conversionType}):`,
+                    error,
+                )
                 // Fallback to ACE's native implementation
-                this.editor.execCommand(conversionType.toLowerCase());
+                this.editor.execCommand(conversionType.toLowerCase())
             } finally {
-                state.operationInProgress = false;
-                state.lastConversionTime = performance.now();
+                state.operationInProgress = false
+                state.lastConversionTime = performance.now()
             }
         },
 
         /**
          * Handle large text conversions with requestAnimationFrame for non-blocking operation
          */
-        performLargeTextConversion(range, text, conversionType, originalRange, cacheKey) {
+        performLargeTextConversion(
+            range,
+            text,
+            conversionType,
+            originalRange,
+            cacheKey,
+        ) {
             // Use ACE's nextFrame pattern for non-blocking operations
             requestAnimationFrame(() => {
                 try {
-                    const convertedText = conversionType === 'toUpperCase' ?
-                        text.toUpperCase() : text.toLowerCase();
+                    const convertedText =
+                        conversionType === 'toUpperCase'
+                            ? text.toUpperCase()
+                            : text.toLowerCase()
 
-                    this.performOptimizedReplacement(range, convertedText, originalRange, cacheKey);
+                    this.performOptimizedReplacement(
+                        range,
+                        convertedText,
+                        originalRange,
+                        cacheKey,
+                    )
                 } catch (error) {
-                    console.warn('Large text conversion failed:', error);
-                    this.editor.execCommand(conversionType.toLowerCase());
+                    console.warn('Large text conversion failed:', error)
+                    this.editor.execCommand(conversionType.toLowerCase())
                 }
-            });
+            })
         },
 
         /**
          * Perform optimized text replacement with undo management
          * Based on ACE Editor internal best practices
          */
-        performOptimizedReplacement(range, convertedText, originalRange, cacheKey) {
-            const session = this.editor.getSession();
+        performOptimizedReplacement(
+            range,
+            convertedText,
+            originalRange,
+            cacheKey,
+        ) {
+            const session = this.editor.getSession()
 
             // Optimize undo management by batching operations
-            const originalMergeDeltas = session.getOption('mergeUndoDeltas');
-            session.setOption('mergeUndoDeltas', 'always');
+            const originalMergeDeltas = session.mergeUndoDeltas
+            session.mergeUndoDeltas = 'always'
 
             try {
                 // Perform the replacement
-                session.replace(range, convertedText);
+                session.replace(range, convertedText)
 
                 // Restore original selection
-                this.editor.getSelection().setSelectionRange(originalRange);
+                this.editor.getSelection().setSelectionRange(originalRange)
 
                 // Cache the result for future use
-                this.cacheConversionResult(cacheKey, convertedText);
-
+                this.cacheConversionResult(cacheKey, convertedText)
             } finally {
                 // Restore original undo merge setting
-                session.setOption('mergeUndoDeltas', originalMergeDeltas);
+                session.mergeUndoDeltas = originalMergeDeltas
             }
         },
 
@@ -1012,28 +1147,27 @@ export default function aceEditorComponent({
          * Cache conversion results to improve performance for repeated operations
          */
         cacheConversionResult(cacheKey, convertedText) {
-            const state = this.caseConversionState;
+            const state = this.caseConversionState
 
             // Manage cache size to prevent memory issues
             if (state.conversionCache.size >= state.maxCacheSize) {
                 // Remove oldest entries (simple LRU implementation)
-                const firstKey = state.conversionCache.keys().next().value;
-                state.conversionCache.delete(firstKey);
+                const firstKey = state.conversionCache.keys().next().value
+                state.conversionCache.delete(firstKey)
             }
 
-            state.conversionCache.set(cacheKey, convertedText);
+            state.conversionCache.set(cacheKey, convertedText)
         },
 
-        
         togglePrintMargin() {
-            const current = this.printMarginState.showPrintMargin;
-            const newState = !current;
+            const current = this.printMarginState.showPrintMargin
+            const newState = !current
 
             // Optimized print margin toggle with performance improvements
-            this.setPrintMarginOptimized(newState);
+            this.setPrintMarginOptimized(newState)
 
             // Update toolbar state immediately for responsive UI
-            this.updateToolbarState(true);
+            this.updateToolbarState(true)
         },
 
         /**
@@ -1042,39 +1176,40 @@ export default function aceEditorComponent({
          */
         setPrintMarginOptimized(show) {
             if (this.printMarginState.showPrintMargin === show) {
-                return; // No change needed
+                return // No change needed
             }
 
-            const now = performance.now();
+            const now = performance.now()
 
             // Update our cached state immediately for responsive UI
-            this.printMarginState.showPrintMargin = show;
-            this.printMarginState.lastUpdateTime = now;
+            this.printMarginState.showPrintMargin = show
+            this.printMarginState.lastUpdateTime = now
 
             // Use requestAnimationFrame for smooth, non-blocking updates
             if (this.printMarginState.throttledUpdate) {
-                cancelAnimationFrame(this.printMarginState.throttledUpdate);
+                cancelAnimationFrame(this.printMarginState.throttledUpdate)
             }
 
-            this.printMarginState.throttledUpdate = requestAnimationFrame(() => {
-                try {
-                    // Batch the ACE API call to reduce layout thrashing
-                    this.editor.setShowPrintMargin(show);
+            this.printMarginState.throttledUpdate = requestAnimationFrame(
+                () => {
+                    try {
+                        // Batch the ACE API call to reduce layout thrashing
+                        this.editor.setShowPrintMargin(show)
 
-                    // Update word wrap if needed (print margin affects wrap behavior)
-                    this.updateWordWrapForPrintMargin();
+                        // Update word wrap if needed (print margin affects wrap behavior)
+                        this.updateWordWrapForPrintMargin()
+                    } catch (error) {
+                        console.warn('Print margin update failed:', error)
+                        // Fallback to direct API call
+                        this.editor.setShowPrintMargin(show)
+                    } finally {
+                        this.printMarginState.throttledUpdate = null
+                        this.printMarginState.updateScheduled = false
+                    }
+                },
+            )
 
-                } catch (error) {
-                    console.warn('Print margin update failed:', error);
-                    // Fallback to direct API call
-                    this.editor.setShowPrintMargin(show);
-                } finally {
-                    this.printMarginState.throttledUpdate = null;
-                    this.printMarginState.updateScheduled = false;
-                }
-            });
-
-            this.printMarginState.updateScheduled = true;
+            this.printMarginState.updateScheduled = true
         },
 
         /**
@@ -1083,13 +1218,13 @@ export default function aceEditorComponent({
          */
         updateWordWrapForPrintMargin() {
             try {
-                const session = this.editor.getSession();
+                const session = this.editor.getSession()
                 if (session && session.getUseWrapMode()) {
                     // Trigger word wrap recalculation when print margin changes
                     // This mimics ACE's internal behavior in adjustWrapLimit()
-                    const renderer = this.editor.renderer;
+                    const renderer = this.editor.renderer
                     if (renderer && renderer.adjustWrapLimit) {
-                        renderer.adjustWrapLimit();
+                        renderer.adjustWrapLimit()
                     }
                 }
             } catch (error) {
@@ -1101,36 +1236,41 @@ export default function aceEditorComponent({
          * Set print margin column with performance optimizations
          */
         setPrintMarginColumn(column) {
-            column = Math.max(1, Math.min(column, 1000)); // Reasonable bounds
+            column = Math.max(1, Math.min(column, 1000)) // Reasonable bounds
 
             if (this.printMarginState.printMarginColumn === column) {
-                return; // No change needed
+                return // No change needed
             }
 
-            this.printMarginState.printMarginColumn = column;
+            this.printMarginState.printMarginColumn = column
 
             // Use throttled update for column changes
             if (this.printMarginState.throttledUpdate) {
-                cancelAnimationFrame(this.printMarginState.throttledUpdate);
+                cancelAnimationFrame(this.printMarginState.throttledUpdate)
             }
 
-            this.printMarginState.throttledUpdate = requestAnimationFrame(() => {
-                try {
-                    this.editor.setPrintMarginColumn(column);
-                    this.updateWordWrapForPrintMargin();
-                } catch (error) {
-                    console.warn('Print margin column update failed:', error);
-                } finally {
-                    this.printMarginState.throttledUpdate = null;
-                }
-            });
+            this.printMarginState.throttledUpdate = requestAnimationFrame(
+                () => {
+                    try {
+                        this.editor.setPrintMarginColumn(column)
+                        this.updateWordWrapForPrintMargin()
+                    } catch (error) {
+                        console.warn(
+                            'Print margin column update failed:',
+                            error,
+                        )
+                    } finally {
+                        this.printMarginState.throttledUpdate = null
+                    }
+                },
+            )
         },
 
         goToLine() {
-            if (!this.editor) return;
+            if (!this.editor) return
 
             // Use optimized goto line dialog based on ACE's internal implementation
-            this.showOptimizedGotoLineDialog();
+            this.showOptimizedGotoLineDialog()
         },
 
         /**
@@ -1138,40 +1278,51 @@ export default function aceEditorComponent({
          * Includes performance optimizations and ACE-like features
          */
         showOptimizedGotoLineDialog() {
-            const session = this.editor.getSession();
-            const currentLine = this.editor.getCursorPosition().row + 1;
-            const totalLines = session.getLength();
+            const session = this.editor.getSession()
+            const currentLine = this.editor.getCursorPosition().row + 1
+            const totalLines = session.getLength()
 
             // Check for dark mode once and cache
-            const isDarkMode = document.documentElement.classList.contains('dark');
+            const isDarkMode =
+                document.documentElement.classList.contains('dark')
 
             // Create optimized modal with performance considerations
-            const editorContainer = this.editor.container;
-            const overlay = this.createOptimizedModal(isDarkMode);
+            const editorContainer = this.editor.container
+            const overlay = this.createOptimizedModal(isDarkMode)
 
             // Create enhanced dialog with ACE-like features
-            const dialog = this.createGotoLineDialog(currentLine, totalLines, isDarkMode);
-            overlay.appendChild(dialog);
-            editorContainer.appendChild(overlay);
+            const dialog = this.createGotoLineDialog(
+                currentLine,
+                totalLines,
+                isDarkMode,
+            )
+            overlay.appendChild(dialog)
+            editorContainer.appendChild(overlay)
 
             // Setup optimized event handlers
-            this.setupGotoLineHandlers(overlay, dialog, currentLine, totalLines, isDarkMode);
+            this.setupGotoLineHandlers(
+                overlay,
+                dialog,
+                currentLine,
+                totalLines,
+                isDarkMode,
+            )
 
             // Focus input with RAF for better performance
             requestAnimationFrame(() => {
-                const input = dialog.querySelector('#gotoLineInput');
+                const input = dialog.querySelector('#gotoLineInput')
                 if (input) {
-                    input.focus();
-                    input.select();
+                    input.focus()
+                    input.select()
                 }
-            });
+            })
         },
 
         /**
          * Create optimized modal overlay with performance enhancements
          */
         createOptimizedModal(isDarkMode) {
-            const overlay = document.createElement('div');
+            const overlay = document.createElement('div')
             overlay.style.cssText = `
                 position: absolute;
                 top: 0;
@@ -1186,22 +1337,22 @@ export default function aceEditorComponent({
                 font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
                 backdrop-filter: blur(2px);
                 transition: opacity 0.15s ease-out;
-            `;
-            overlay.style.opacity = '0';
+            `
+            overlay.style.opacity = '0'
 
             // Fade in animation for better UX
             requestAnimationFrame(() => {
-                overlay.style.opacity = '1';
-            });
+                overlay.style.opacity = '1'
+            })
 
-            return overlay;
+            return overlay
         },
 
         /**
          * Create goto line dialog with ACE-like features and performance optimizations
          */
         createGotoLineDialog(currentLine, totalLines, isDarkMode) {
-            const dialog = document.createElement('div');
+            const dialog = document.createElement('div')
             dialog.style.cssText = `
                 background: ${isDarkMode ? '#1f2937' : 'white'};
                 color: ${isDarkMode ? 'white' : 'black'};
@@ -1214,39 +1365,75 @@ export default function aceEditorComponent({
                 transform: scale(0.95);
                 opacity: 0;
                 transition: all 0.15s ease-out;
-            `;
+            `
 
             // Enhanced dialog with history support (like ACE's implementation)
-            const historyHtml = this.gotoLineState.history.length > 0 ?
-                `<div style="margin-top: 12px; padding-top: 12px; border-top: 1px solid ${isDarkMode ? '#374151' : '#e5e7eb'};">
-                    <div style="font-size: 11px; color: ${isDarkMode ? '#9ca3af' : '#666'}; margin-bottom: 6px;">Recent:</div>
+            const historyHtml =
+                this.gotoLineState.history.length > 0
+                    ? `<div style="margin-top: 12px; padding-top: 12px; border-top: 1px solid ${
+                          isDarkMode ? '#374151' : '#e5e7eb'
+                      };">
+                    <div style="font-size: 11px; color: ${
+                        isDarkMode ? '#9ca3af' : '#666'
+                    }; margin-bottom: 6px;">Recent:</div>
                     <div id="gotoHistory" style="display: flex; flex-wrap: wrap; gap: 4px;">
-                        ${this.gotoLineState.history.slice(-5).map(line =>
-                            `<button class="history-btn" data-line="${line}" style="padding: 2px 8px; font-size: 11px; background: ${isDarkMode ? '#374151' : '#f3f4f6'}; color: ${isDarkMode ? '#d1d5db' : '#4b5563'}; border: 1px solid ${isDarkMode ? '#4b5563' : '#d1d5db'}; border-radius: 3px; cursor: pointer; font-family: monospace;">${line}</button>`
-                        ).join('')}
+                        ${this.gotoLineState.history
+                            .slice(-5)
+                            .map(
+                                (line) =>
+                                    `<button class="history-btn" data-line="${line}" style="padding: 2px 8px; font-size: 11px; background: ${
+                                        isDarkMode ? '#374151' : '#f3f4f6'
+                                    }; color: ${
+                                        isDarkMode ? '#d1d5db' : '#4b5563'
+                                    }; border: 1px solid ${
+                                        isDarkMode ? '#4b5563' : '#d1d5db'
+                                    }; border-radius: 3px; cursor: pointer; font-family: monospace;">${line}</button>`,
+                            )
+                            .join('')}
                     </div>
-                </div>` : '';
+                </div>`
+                    : ''
 
             dialog.innerHTML = `
                 <div style="margin-bottom: 16px;">
-                    <h3 style="margin: 0 0 12px 0; font-size: 16px; font-weight: 600; color: ${isDarkMode ? 'white' : '#111827'};">Go to Line</h3>
+                    <h3 style="margin: 0 0 12px 0; font-size: 16px; font-weight: 600; color: ${
+                        isDarkMode ? 'white' : '#111827'
+                    };">Go to Line</h3>
                     <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
-                        <label style="font-size: 13px; font-weight: 500; white-space: nowrap; color: ${isDarkMode ? '#d1d5db' : '#374151'};">Line:</label>
+                        <label style="font-size: 13px; font-weight: 500; white-space: nowrap; color: ${
+                            isDarkMode ? '#d1d5db' : '#374151'
+                        };">Line:</label>
                         <input type="text"
                                id="gotoLineInput"
                                inputmode="numeric"
                                pattern="[0-9]*"
                                value="${currentLine}"
-                               style="flex: 1; padding: 6px 10px; border: 2px solid ${isDarkMode ? '#4b5563' : '#d1d5db'}; background: ${isDarkMode ? '#374151' : 'white'}; color: ${isDarkMode ? 'white' : 'black'}; border-radius: 4px; font-size: 14px; font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Roboto Mono', monospace; min-width: 80px; outline: none; transition: border-color 0.15s ease;"
+                               style="flex: 1; padding: 6px 10px; border: 2px solid ${
+                                   isDarkMode ? '#4b5563' : '#d1d5db'
+                               }; background: ${
+                isDarkMode ? '#374151' : 'white'
+            }; color: ${
+                isDarkMode ? 'white' : 'black'
+            }; border-radius: 4px; font-size: 14px; font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Roboto Mono', monospace; min-width: 80px; outline: none; transition: border-color 0.15s ease;"
                                placeholder="1"
                                autocomplete="off">
-                        <span style="font-size: 12px; color: ${isDarkMode ? '#9ca3af' : '#6b7280'};">of ${totalLines}</span>
+                        <span style="font-size: 12px; color: ${
+                            isDarkMode ? '#9ca3af' : '#6b7280'
+                        };">of ${totalLines}</span>
                     </div>
-                    <div id="inputFeedback" style="font-size: 11px; color: ${isDarkMode ? '#f87171' : '#dc2626'}; min-height: 16px; opacity: 0; transition: opacity 0.15s ease;">Invalid line number</div>
+                    <div id="inputFeedback" style="font-size: 11px; color: ${
+                        isDarkMode ? '#f87171' : '#dc2626'
+                    }; min-height: 16px; opacity: 0; transition: opacity 0.15s ease;">Invalid line number</div>
                 </div>
                 <div style="display: flex; gap: 8px; justify-content: flex-end;">
                     <button id="gotoLineCancel"
-                            style="padding: 6px 14px; border: 1px solid ${isDarkMode ? '#4b5563' : '#d1d5db'}; background: ${isDarkMode ? '#374151' : 'white'}; color: ${isDarkMode ? 'white' : 'black'}; border-radius: 4px; cursor: pointer; font-size: 13px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; transition: all 0.15s ease;">
+                            style="padding: 6px 14px; border: 1px solid ${
+                                isDarkMode ? '#4b5563' : '#d1d5db'
+                            }; background: ${
+                isDarkMode ? '#374151' : 'white'
+            }; color: ${
+                isDarkMode ? 'white' : 'black'
+            }; border-radius: 4px; cursor: pointer; font-size: 13px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; transition: all 0.15s ease;">
                         Cancel
                     </button>
                     <button id="gotoLineGo"
@@ -1255,202 +1442,228 @@ export default function aceEditorComponent({
                     </button>
                 </div>
                 ${historyHtml}
-            `;
+            `
 
             // Animate dialog appearance
             requestAnimationFrame(() => {
-                dialog.style.transform = 'scale(1)';
-                dialog.style.opacity = '1';
-            });
+                dialog.style.transform = 'scale(1)'
+                dialog.style.opacity = '1'
+            })
 
-            return dialog;
+            return dialog
         },
 
         /**
          * Setup optimized event handlers with performance considerations
          */
-        setupGotoLineHandlers(overlay, dialog, _currentLine, _totalLines, _isDarkMode) {
-            const input = dialog.querySelector('#gotoLineInput');
-            const goButton = dialog.querySelector('#gotoLineGo');
-            const cancelButton = dialog.querySelector('#gotoLineCancel');
-            const feedback = dialog.querySelector('#inputFeedback');
-            const historyButtons = dialog.querySelectorAll('.history-btn');
+        setupGotoLineHandlers(
+            overlay,
+            dialog,
+            _currentLine,
+            _totalLines,
+            _isDarkMode,
+        ) {
+            const input = dialog.querySelector('#gotoLineInput')
+            const goButton = dialog.querySelector('#gotoLineGo')
+            const cancelButton = dialog.querySelector('#gotoLineCancel')
+            const feedback = dialog.querySelector('#inputFeedback')
+            const historyButtons = dialog.querySelectorAll('.history-btn')
 
             // Optimized goto line function based on ACE's implementation
             const goToLine = () => {
-                const inputText = input.value.trim();
+                const inputText = input.value.trim()
 
                 // Support ACE-like syntax: "line:column", "line>column", etc.
-                const parseResult = this.parseGotoLineInput(inputText);
+                const parseResult = this.parseGotoLineInput(inputText)
 
                 if (parseResult.isValid) {
                     // Add to history (like ACE's implementation)
-                    this.addToGotoHistory(parseResult.line);
+                    this.addToGotoHistory(parseResult.line)
 
                     // Use ACE's optimized gotoLine method
-                    this.performOptimizedGotoLine(parseResult.line, parseResult.column, true);
+                    this.performOptimizedGotoLine(
+                        parseResult.line,
+                        parseResult.column,
+                        true,
+                    )
 
-                    this.editor.focus();
-                    closeDialogWithAnimation();
+                    this.editor.focus()
+                    closeDialogWithAnimation()
                 } else {
-                    showInputError(parseResult.error);
+                    showInputError(parseResult.error)
                 }
-            };
+            }
 
             const showInputError = (error) => {
-                feedback.textContent = error;
-                feedback.style.opacity = '1';
-                input.style.borderColor = _isDarkMode ? '#f87171' : '#dc2626';
+                feedback.textContent = error
+                feedback.style.opacity = '1'
+                input.style.borderColor = _isDarkMode ? '#f87171' : '#dc2626'
 
                 setTimeout(() => {
-                    feedback.style.opacity = '0';
-                    input.style.borderColor = _isDarkMode ? '#4b5563' : '#d1d5db';
-                }, 2000);
-            };
+                    feedback.style.opacity = '0'
+                    input.style.borderColor = _isDarkMode
+                        ? '#4b5563'
+                        : '#d1d5db'
+                }, 2000)
+            }
 
             const closeDialogWithAnimation = () => {
-                dialog.style.transform = 'scale(0.95)';
-                dialog.style.opacity = '0';
-                overlay.style.opacity = '0';
+                dialog.style.transform = 'scale(0.95)'
+                dialog.style.opacity = '0'
+                overlay.style.opacity = '0'
 
                 setTimeout(() => {
-                    this.cleanupGotoLineDialog(overlay);
-                    this.editor.focus();
-                }, 150);
-            };
+                    this.cleanupGotoLineDialog(overlay)
+                    this.editor.focus()
+                }, 150)
+            }
 
             const closeDialog = () => {
-                closeDialogWithAnimation();
-            };
+                closeDialogWithAnimation()
+            }
 
             // Optimized input validation with debouncing
-            let validationTimeout;
+            let validationTimeout
             const validateInput = () => {
-                clearTimeout(validationTimeout);
+                clearTimeout(validationTimeout)
                 validationTimeout = setTimeout(() => {
-                    const parseResult = this.parseGotoLineInput(input.value.trim());
-                    goButton.style.opacity = parseResult.isValid ? '1' : '0.6';
-                    goButton.disabled = !parseResult.isValid;
+                    const parseResult = this.parseGotoLineInput(
+                        input.value.trim(),
+                    )
+                    goButton.style.opacity = parseResult.isValid ? '1' : '0.6'
+                    goButton.disabled = !parseResult.isValid
 
                     if (parseResult.isValid) {
-                        input.style.borderColor = _isDarkMode ? '#10b981' : '#059669';
-                        feedback.style.opacity = '0';
+                        input.style.borderColor = _isDarkMode
+                            ? '#10b981'
+                            : '#059669'
+                        feedback.style.opacity = '0'
                     } else if (input.value.trim()) {
-                        input.style.borderColor = _isDarkMode ? '#4b5563' : '#d1d5db';
-                        feedback.style.opacity = '0';
+                        input.style.borderColor = _isDarkMode
+                            ? '#4b5563'
+                            : '#d1d5db'
+                        feedback.style.opacity = '0'
                     }
-                }, 150);
-            };
+                }, 150)
+            }
 
             // Event listeners with performance optimizations
-            input.addEventListener('input', validateInput);
+            input.addEventListener('input', validateInput)
 
             input.addEventListener('keydown', (e) => {
                 if (e.key === 'Enter') {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    goToLine();
-                    return false;
+                    e.preventDefault()
+                    e.stopPropagation()
+                    goToLine()
+                    return false
                 } else if (e.key === 'Escape') {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    closeDialog();
-                    return false;
+                    e.preventDefault()
+                    e.stopPropagation()
+                    closeDialog()
+                    return false
                 }
-            });
+            })
 
             // Handle history button clicks
-            historyButtons.forEach(btn => {
+            historyButtons.forEach((btn) => {
                 btn.addEventListener('click', () => {
-                    const line = btn.dataset.line;
-                    input.value = line;
-                    validateInput();
-                    input.focus();
-                });
-            });
+                    const line = btn.dataset.line
+                    input.value = line
+                    validateInput()
+                    input.focus()
+                })
+            })
 
             // Button event listeners
-            goButton.addEventListener('click', goToLine);
-            cancelButton.addEventListener('click', closeDialog);
+            goButton.addEventListener('click', goToLine)
+            cancelButton.addEventListener('click', closeDialog)
 
             // Close on overlay click
             overlay.addEventListener('click', (e) => {
                 if (e.target === overlay) {
-                    closeDialog();
+                    closeDialog()
                 }
-            });
+            })
 
             // Global key handler with cleanup
             const documentKeyHandler = (e) => {
                 if (e.key === 'Enter' || e.key === 'Escape') {
                     if (overlay.parentNode) {
-                        e.preventDefault();
-                        e.stopPropagation();
+                        e.preventDefault()
+                        e.stopPropagation()
                         if (e.key === 'Enter') {
-                            goToLine();
+                            goToLine()
                         } else {
-                            closeDialog();
+                            closeDialog()
                         }
-                        return false;
+                        return false
                     }
                 }
-            };
+            }
 
-            document.addEventListener('keydown', documentKeyHandler, true);
+            document.addEventListener('keydown', documentKeyHandler, true)
 
             // Store cleanup function
             overlay._cleanup = () => {
-                document.removeEventListener('keydown', documentKeyHandler, true);
-                clearTimeout(validationTimeout);
-            };
+                document.removeEventListener(
+                    'keydown',
+                    documentKeyHandler,
+                    true,
+                )
+                clearTimeout(validationTimeout)
+            }
         },
 
         /**
          * Parse goto line input supporting ACE-like syntax
          */
         parseGotoLineInput(input) {
-            const session = this.editor.getSession();
-            const totalLines = session.getLength();
+            const session = this.editor.getSession()
+            const totalLines = session.getLength()
 
             // Handle empty input
             if (!input) {
-                return { isValid: false, error: 'Please enter a line number' };
+                return { isValid: false, error: 'Please enter a line number' }
             }
 
             // Support various syntax like ACE: "123", "123:45", "123>45", "c123", etc.
-            let line, column = 0;
+            let line,
+                column = 0
 
             // Column syntax: "123:45" or "123>45"
-            const columnMatch = input.match(/^(\d+)([:>])(\d*)$/);
+            const columnMatch = input.match(/^(\d+)([:>])(\d*)$/)
             if (columnMatch) {
-                line = parseInt(columnMatch[1], 10);
+                line = parseInt(columnMatch[1], 10)
                 if (columnMatch[3]) {
-                    column = parseInt(columnMatch[3], 10);
+                    column = parseInt(columnMatch[3], 10)
                 }
             }
             // Character position syntax: "c123"
             else if (input.toLowerCase().startsWith('c')) {
                 // This would require character position calculation - simplified for now
-                const charPos = parseInt(input.slice(1), 10);
-                const approxLine = Math.max(1, Math.floor(charPos / 80)); // Rough estimate
-                return { isValid: true, line: approxLine, column: 0 };
+                const charPos = parseInt(input.slice(1), 10)
+                const approxLine = Math.max(1, Math.floor(charPos / 80)) // Rough estimate
+                return { isValid: true, line: approxLine, column: 0 }
             }
             // Simple line number
             else {
-                line = parseInt(input, 10);
+                line = parseInt(input, 10)
             }
 
             // Validate line number
             if (isNaN(line) || line < 1 || line > totalLines) {
-                return { isValid: false, error: `Line must be between 1 and ${totalLines}` };
+                return {
+                    isValid: false,
+                    error: `Line must be between 1 and ${totalLines}`,
+                }
             }
 
             // Validate column
             if (isNaN(column) || column < 0) {
-                column = 0;
+                column = 0
             }
 
-            return { isValid: true, line, column };
+            return { isValid: true, line, column }
         },
 
         /**
@@ -1460,36 +1673,37 @@ export default function aceEditorComponent({
             try {
                 // Cancel any ongoing animation
                 if (this.gotoLineState.animationFrame) {
-                    cancelAnimationFrame(this.gotoLineState.animationFrame);
+                    cancelAnimationFrame(this.gotoLineState.animationFrame)
                 }
 
                 // Use RAF for smooth non-blocking operation
-                this.gotoLineState.animationFrame = requestAnimationFrame(() => {
-                    // Clear selection (like ACE's implementation)
-                    this.editor.clearSelection();
+                this.gotoLineState.animationFrame = requestAnimationFrame(
+                    () => {
+                        // Clear selection (like ACE's implementation)
+                        this.editor.clearSelection()
 
-                    // Ensure line is unfolded (like ACE does)
-                    const session = this.editor.getSession();
-                    session.unfold({ row: line - 1, column: column || 0 });
+                        // Ensure line is unfolded (like ACE does)
+                        const session = this.editor.getSession()
+                        session.unfold({ row: line - 1, column: column || 0 })
 
-                    // Move cursor to position
-                    this.editor.moveCursorTo(line - 1, column || 0);
+                        // Move cursor to position
+                        this.editor.moveCursorTo(line - 1, column || 0)
 
-                    // Scroll to line with performance optimization
-                    if (!this.editor.isRowFullyVisible(line - 1)) {
-                        // Use ACE's optimized scrollToLine method
-                        this.editor.scrollToLine(line - 1, true, animate);
-                    }
+                        // Scroll to line with performance optimization
+                        if (!this.editor.isRowFullyVisible(line - 1)) {
+                            // Use ACE's optimized scrollToLine method
+                            this.editor.scrollToLine(line - 1, true, animate)
+                        }
 
-                    // Track last goto for quick access
-                    this.gotoLineState.lastGotoLine = line;
-                    this.gotoLineState.animationFrame = null;
-                });
-
+                        // Track last goto for quick access
+                        this.gotoLineState.lastGotoLine = line
+                        this.gotoLineState.animationFrame = null
+                    },
+                )
             } catch (error) {
-                console.warn('Goto line operation failed:', error);
+                console.warn('Goto line operation failed:', error)
                 // Fallback to direct ACE method
-                this.editor.gotoLine(line, column, animate);
+                this.editor.gotoLine(line, column, animate)
             }
         },
 
@@ -1498,17 +1712,20 @@ export default function aceEditorComponent({
          */
         addToGotoHistory(line) {
             // Remove if already exists
-            const index = this.gotoLineState.history.indexOf(line);
+            const index = this.gotoLineState.history.indexOf(line)
             if (index > -1) {
-                this.gotoLineState.history.splice(index, 1);
+                this.gotoLineState.history.splice(index, 1)
             }
 
             // Add to end
-            this.gotoLineState.history.push(line);
+            this.gotoLineState.history.push(line)
 
             // Limit history size (same as ACE's limit)
-            if (this.gotoLineState.history.length > this.gotoLineState.maxHistory) {
-                this.gotoLineState.history.shift();
+            if (
+                this.gotoLineState.history.length >
+                this.gotoLineState.maxHistory
+            ) {
+                this.gotoLineState.history.shift()
             }
         },
 
@@ -1517,47 +1734,46 @@ export default function aceEditorComponent({
          */
         cleanupGotoLineDialog(overlay) {
             if (overlay.parentNode) {
-                overlay.parentNode.removeChild(overlay);
+                overlay.parentNode.removeChild(overlay)
             }
 
             // Call cleanup function if it exists
             if (overlay._cleanup) {
-                overlay._cleanup();
-                overlay._cleanup = null;
+                overlay._cleanup()
+                overlay._cleanup = null
             }
 
             // Clear any animation frame
             if (this.gotoLineState.animationFrame) {
-                cancelAnimationFrame(this.gotoLineState.animationFrame);
-                this.gotoLineState.animationFrame = null;
+                cancelAnimationFrame(this.gotoLineState.animationFrame)
+                this.gotoLineState.animationFrame = null
             }
         },
 
-    
         toggleFullscreen() {
-            this.isFullscreen = !this.isFullscreen;
-            const container = this.$el.closest('.rd-ace-editor');
+            this.isFullscreen = !this.isFullscreen
+            const container = this.$el.closest('.rd-ace-editor')
 
             if (this.isFullscreen) {
                 // Enter fullscreen
-                container.classList.add('rd-ace-editor--fullscreen');
-                document.body.style.overflow = 'hidden';
+                container.classList.add('rd-ace-editor--fullscreen')
+                document.body.style.overflow = 'hidden'
             } else {
                 // Exit fullscreen
-                container.classList.remove('rd-ace-editor--fullscreen');
-                document.body.style.overflow = '';
+                container.classList.remove('rd-ace-editor--fullscreen')
+                document.body.style.overflow = ''
             }
 
             // Trigger ACE resize after a short delay (performance optimized)
             setTimeout(() => {
                 if (this.editor && !this.isDestroyed) {
-                    this.editor.resize();
+                    this.editor.resize()
                     // Only call updateFull() when necessary - it's very expensive
                     if (this.isFullscreen) {
-                        this.editor.renderer.updateFull();
+                        this.editor.renderer.updateFull()
                     }
                 }
-            }, 100);
+            }, 100)
         },
 
         /**
@@ -1565,46 +1781,58 @@ export default function aceEditorComponent({
          * This should be called once after editor initialization
          */
         initializeExpensiveStateCache() {
-            if (!this.editor) return;
+            if (!this.editor) return
 
             try {
                 // Cache expensive-to-retrieve state values
-                this.lastExpensiveState.showInvisibles = this.editor.getShowInvisibles();
-                this.lastExpensiveState.lastCheckTime = Date.now();
+                this.lastExpensiveState.showInvisibles =
+                    this.editor.getShowInvisibles()
+                this.lastExpensiveState.lastCheckTime = Date.now()
 
                 // Initialize print margin state with optimal defaults
-                this.printMarginState.showPrintMargin = this.editor.getShowPrintMargin();
-                this.printMarginState.printMarginColumn = this.editor.getPrintMarginColumn() || 80;
-                this.printMarginState.lastUpdateTime = Date.now();
+                this.printMarginState.showPrintMargin =
+                    this.editor.getShowPrintMargin()
+                this.printMarginState.printMarginColumn =
+                    this.editor.getPrintMarginColumn() || 80
+                this.printMarginState.lastUpdateTime = Date.now()
 
                 // Initialize toolbar state cache as well
-                const undoManager = this.editor.session.getUndoManager();
-                this.lastToolbarState.canUndo = undoManager.hasUndo();
-                this.lastToolbarState.canRedo = undoManager.hasRedo();
+                const undoManager = this.editor.session.getUndoManager()
+                this.lastToolbarState.canUndo = undoManager.hasUndo()
+                this.lastToolbarState.canRedo = undoManager.hasRedo()
 
                 // Initialize our optimized undo/redo state cache
-                this.undoRedoState.canUndo = this.lastToolbarState.canUndo;
-                this.undoRedoState.canRedo = this.lastToolbarState.canRedo;
-                this.undoRedoState.lastCheckTime = Date.now();
-                this.lastToolbarState.showPrintMargin = this.printMarginState.showPrintMargin;
-                this.lastToolbarState.showInvisibles = this.lastExpensiveState.showInvisibles;
-                this.lastToolbarState.wordWrapEnabled = this.editor.getSession().getUseWrapMode();
+                this.undoRedoState.canUndo = this.lastToolbarState.canUndo
+                this.undoRedoState.canRedo = this.lastToolbarState.canRedo
+                this.undoRedoState.lastCheckTime = Date.now()
+                this.lastToolbarState.showPrintMargin =
+                    this.printMarginState.showPrintMargin
+                this.lastToolbarState.showInvisibles =
+                    this.lastExpensiveState.showInvisibles
+                this.lastToolbarState.wordWrapEnabled = this.editor
+                    .getSession()
+                    .getUseWrapMode()
 
                 // Set initial Alpine.js state
-                this.toolbarState.canUndo = this.lastToolbarState.canUndo;
-                this.toolbarState.canRedo = this.lastToolbarState.canRedo;
-                this.toolbarState.showPrintMargin = this.lastToolbarState.showPrintMargin;
-                this.toolbarState.showInvisibles = this.lastToolbarState.showInvisibles;
-                this.toolbarState.wordWrapEnabled = this.lastToolbarState.wordWrapEnabled;
-
+                this.toolbarState.canUndo = this.lastToolbarState.canUndo
+                this.toolbarState.canRedo = this.lastToolbarState.canRedo
+                this.toolbarState.showPrintMargin =
+                    this.lastToolbarState.showPrintMargin
+                this.toolbarState.showInvisibles =
+                    this.lastToolbarState.showInvisibles
+                this.toolbarState.wordWrapEnabled =
+                    this.lastToolbarState.wordWrapEnabled
             } catch (error) {
-                console.warn('Failed to initialize expensive state cache:', error);
+                console.warn(
+                    'Failed to initialize expensive state cache:',
+                    error,
+                )
                 // Fallback to default values
-                this.lastExpensiveState.showInvisibles = false;
-                this.lastExpensiveState.lastCheckTime = Date.now();
-                this.printMarginState.showPrintMargin = true;
-                this.printMarginState.printMarginColumn = 80;
-                this.printMarginState.lastUpdateTime = Date.now();
+                this.lastExpensiveState.showInvisibles = false
+                this.lastExpensiveState.lastCheckTime = Date.now()
+                this.printMarginState.showPrintMargin = true
+                this.printMarginState.printMarginColumn = 80
+                this.printMarginState.lastUpdateTime = Date.now()
             }
         },
 
@@ -1613,57 +1841,62 @@ export default function aceEditorComponent({
          * Based on ACE Editor's undo system research
          */
         performOptimizedUndo() {
-            if (!this.editor || !this.editor.session) return;
+            if (!this.editor || !this.editor.session) return
 
             try {
-                const undoManager = this.editor.session.getUndoManager();
+                const undoManager = this.editor.session.getUndoManager()
                 if (!undoManager || !undoManager.hasUndo()) {
-                    return; // Nothing to undo
+                    return // Nothing to undo
                 }
 
                 // Check if we should queue this operation to prevent rapid calls
-                const now = performance.now();
-                const timeSinceLastOp = now - this.undoRedoState.lastOperationTime;
+                const now = performance.now()
+                const timeSinceLastOp =
+                    now - this.undoRedoState.lastOperationTime
 
                 // Queue rapid operations to prevent performance issues
-                if (timeSinceLastOp < 50 && this.undoRedoState.isProcessingQueue) {
-                    this.undoRedoState.operationQueue.push({ type: 'undo', timestamp: now });
-                    return;
+                if (
+                    timeSinceLastOp < 50 &&
+                    this.undoRedoState.isProcessingQueue
+                ) {
+                    this.undoRedoState.operationQueue.push({
+                        type: 'undo',
+                        timestamp: now,
+                    })
+                    return
                 }
 
-                this.undoRedoState.lastOperationTime = now;
-                this.undoRedoState.isProcessingQueue = true;
+                this.undoRedoState.lastOperationTime = now
+                this.undoRedoState.isProcessingQueue = true
 
                 // Use requestAnimationFrame for non-blocking operation
                 requestAnimationFrame(() => {
                     try {
                         // Perform the undo operation
-                        this.editor.undo();
+                        this.editor.undo()
 
                         // Invalidate our cached undo state
-                        this.undoRedoState.lastCheckTime = 0;
+                        this.undoRedoState.lastCheckTime = 0
 
                         // Update toolbar state immediately for responsive UI
-                        this.updateToolbarState(true);
+                        this.updateToolbarState(true)
 
                         // Process any queued operations
-                        this.processUndoRedoQueue();
-
+                        this.processUndoRedoQueue()
                     } catch (error) {
-                        console.warn('Undo operation failed:', error);
+                        console.warn('Undo operation failed:', error)
                     } finally {
-                        this.undoRedoState.isProcessingQueue = false;
+                        this.undoRedoState.isProcessingQueue = false
                     }
-                });
-
+                })
             } catch (error) {
-                console.warn('Undo operation failed:', error);
+                console.warn('Undo operation failed:', error)
                 // Fallback to direct ACE method
                 try {
-                    this.editor.undo();
-                    this.updateToolbarState(true);
+                    this.editor.undo()
+                    this.updateToolbarState(true)
                 } catch (fallbackError) {
-                    console.warn('Fallback undo also failed:', fallbackError);
+                    console.warn('Fallback undo also failed:', fallbackError)
                 }
             }
         },
@@ -1673,57 +1906,62 @@ export default function aceEditorComponent({
          * Based on ACE Editor's undo system research
          */
         performOptimizedRedo() {
-            if (!this.editor || !this.editor.session) return;
+            if (!this.editor || !this.editor.session) return
 
             try {
-                const undoManager = this.editor.session.getUndoManager();
+                const undoManager = this.editor.session.getUndoManager()
                 if (!undoManager || !undoManager.hasRedo()) {
-                    return; // Nothing to redo
+                    return // Nothing to redo
                 }
 
                 // Check if we should queue this operation to prevent rapid calls
-                const now = performance.now();
-                const timeSinceLastOp = now - this.undoRedoState.lastOperationTime;
+                const now = performance.now()
+                const timeSinceLastOp =
+                    now - this.undoRedoState.lastOperationTime
 
                 // Queue rapid operations to prevent performance issues
-                if (timeSinceLastOp < 50 && this.undoRedoState.isProcessingQueue) {
-                    this.undoRedoState.operationQueue.push({ type: 'redo', timestamp: now });
-                    return;
+                if (
+                    timeSinceLastOp < 50 &&
+                    this.undoRedoState.isProcessingQueue
+                ) {
+                    this.undoRedoState.operationQueue.push({
+                        type: 'redo',
+                        timestamp: now,
+                    })
+                    return
                 }
 
-                this.undoRedoState.lastOperationTime = now;
-                this.undoRedoState.isProcessingQueue = true;
+                this.undoRedoState.lastOperationTime = now
+                this.undoRedoState.isProcessingQueue = true
 
                 // Use requestAnimationFrame for non-blocking operation
                 requestAnimationFrame(() => {
                     try {
                         // Perform the redo operation
-                        this.editor.redo();
+                        this.editor.redo()
 
                         // Invalidate our cached undo state
-                        this.undoRedoState.lastCheckTime = 0;
+                        this.undoRedoState.lastCheckTime = 0
 
                         // Update toolbar state immediately for responsive UI
-                        this.updateToolbarState(true);
+                        this.updateToolbarState(true)
 
                         // Process any queued operations
-                        this.processUndoRedoQueue();
-
+                        this.processUndoRedoQueue()
                     } catch (error) {
-                        console.warn('Redo operation failed:', error);
+                        console.warn('Redo operation failed:', error)
                     } finally {
-                        this.undoRedoState.isProcessingQueue = false;
+                        this.undoRedoState.isProcessingQueue = false
                     }
-                });
-
+                })
             } catch (error) {
-                console.warn('Redo operation failed:', error);
+                console.warn('Redo operation failed:', error)
                 // Fallback to direct ACE method
                 try {
-                    this.editor.redo();
-                    this.updateToolbarState(true);
+                    this.editor.redo()
+                    this.updateToolbarState(true)
                 } catch (fallbackError) {
-                    console.warn('Fallback redo also failed:', fallbackError);
+                    console.warn('Fallback redo also failed:', fallbackError)
                 }
             }
         },
@@ -1733,49 +1971,53 @@ export default function aceEditorComponent({
          * Based on ACE's performance optimization patterns
          */
         processUndoRedoQueue() {
-            if (this.undoRedoState.operationQueue.length === 0) return;
+            if (this.undoRedoState.operationQueue.length === 0) return
 
             // Get the latest operation of each type (ignore duplicates)
-            const operations = this.undoRedoState.operationQueue;
-            const latestUndo = operations.filter(op => op.type === 'undo').pop();
-            const latestRedo = operations.filter(op => op.type === 'redo').pop();
+            const operations = this.undoRedoState.operationQueue
+            const latestUndo = operations
+                .filter((op) => op.type === 'undo')
+                .pop()
+            const latestRedo = operations
+                .filter((op) => op.type === 'redo')
+                .pop()
 
             // Clear the queue
-            this.undoRedoState.operationQueue = [];
+            this.undoRedoState.operationQueue = []
 
             // Schedule the latest operations if they're still relevant
             setTimeout(() => {
                 if (latestUndo && this.canPerformUndo()) {
-                    this.performOptimizedUndo();
+                    this.performOptimizedUndo()
                 } else if (latestRedo && this.canPerformRedo()) {
-                    this.performOptimizedRedo();
+                    this.performOptimizedRedo()
                 }
-            }, 100); // Small delay to prevent rapid operations
+            }, 100) // Small delay to prevent rapid operations
         },
 
         /**
          * Check if undo operation can be performed (cached version)
          */
         canPerformUndo() {
-            const now = Date.now();
-            const timeSinceLastCheck = now - this.undoRedoState.lastCheckTime;
+            const now = Date.now()
+            const timeSinceLastCheck = now - this.undoRedoState.lastCheckTime
 
             // Use cached value if within timeout
             if (timeSinceLastCheck < this.undoRedoState.checkCacheTimeout) {
-                return this.undoRedoState.canUndo;
+                return this.undoRedoState.canUndo
             }
 
             try {
-                const undoManager = this.editor.session.getUndoManager();
-                const canUndo = undoManager ? undoManager.hasUndo() : false;
+                const undoManager = this.editor.session.getUndoManager()
+                const canUndo = undoManager ? undoManager.hasUndo() : false
 
                 // Update cache
-                this.undoRedoState.canUndo = canUndo;
-                this.undoRedoState.lastCheckTime = now;
+                this.undoRedoState.canUndo = canUndo
+                this.undoRedoState.lastCheckTime = now
 
-                return canUndo;
+                return canUndo
             } catch (error) {
-                return false;
+                return false
             }
         },
 
@@ -1783,59 +2025,59 @@ export default function aceEditorComponent({
          * Check if redo operation can be performed (cached version)
          */
         canPerformRedo() {
-            const now = Date.now();
-            const timeSinceLastCheck = now - this.undoRedoState.lastCheckTime;
+            const now = Date.now()
+            const timeSinceLastCheck = now - this.undoRedoState.lastCheckTime
 
             // Use cached value if within timeout
             if (timeSinceLastCheck < this.undoRedoState.checkCacheTimeout) {
-                return this.undoRedoState.canRedo;
+                return this.undoRedoState.canRedo
             }
 
             try {
-                const undoManager = this.editor.session.getUndoManager();
-                const canRedo = undoManager ? undoManager.hasRedo() : false;
+                const undoManager = this.editor.session.getUndoManager()
+                const canRedo = undoManager ? undoManager.hasRedo() : false
 
                 // Update cache
-                this.undoRedoState.canRedo = canRedo;
-                this.undoRedoState.lastCheckTime = now;
+                this.undoRedoState.canRedo = canRedo
+                this.undoRedoState.lastCheckTime = now
 
-                return canRedo;
+                return canRedo
             } catch (error) {
-                return false;
+                return false
             }
         },
 
-  
-    
-      
         /**
          * Optimize undo manager for better performance
          * Based on ACE research findings
          */
         optimizeUndoManager() {
-            if (!this.editor || !this.editor.session) return;
+            if (!this.editor || !this.editor.session) return
 
             try {
-                const undoManager = this.editor.session.getUndoManager();
-                if (!undoManager) return;
+                const undoManager = this.editor.session.getUndoManager()
+                if (!undoManager) return
 
                 // Configure optimal settings based on ACE research
                 if (undoManager.$undoDepth === Infinity) {
                     // Set reasonable limit to prevent memory issues (ACE default is unlimited)
-                    undoManager.$undoDepth = 200; // Reasonable limit for most users
+                    undoManager.$undoDepth = 200 // Reasonable limit for most users
                 }
 
                 // Enable delta merging for better performance (ACE default)
-                if (this.editor.session.mergeUndoDeltas !== true) {
-                    this.editor.session.mergeUndoDeltas = true;
+                if (this.editor.session.mergeUndoDeltas !== 'always') {
+                    this.editor.session.mergeUndoDeltas = 'always'
                 }
 
                 // Monitor undo depth for performance tracking
-                this.undoRedoState.undoDepth = undoManager.$undoStack ? undoManager.$undoStack.length : 0;
-                this.undoRedoState.redoDepth = undoManager.$redoStack ? undoManager.$redoStack.length : 0;
-
+                this.undoRedoState.undoDepth = undoManager.$undoStack
+                    ? undoManager.$undoStack.length
+                    : 0
+                this.undoRedoState.redoDepth = undoManager.$redoStack
+                    ? undoManager.$redoStack.length
+                    : 0
             } catch (error) {
-                console.warn('Failed to optimize undo manager:', error);
+                console.warn('Failed to optimize undo manager:', error)
             }
         },
 
@@ -1844,48 +2086,48 @@ export default function aceEditorComponent({
          * Based on ACE Editor's internal operation management system
          */
         startBatchOperation(operationType = 'default') {
-            const state = this.operationState;
+            const state = this.operationState
 
             if (state.isBatching) {
-                return state.currentOperation;
+                return state.currentOperation
             }
 
-            state.isBatching = true;
+            state.isBatching = true
             state.currentOperation = {
                 type: operationType,
                 startTime: performance.now(),
-                changes: { ...state.pendingChanges }
-            };
+                changes: { ...state.pendingChanges },
+            }
 
             // Cancel any existing batch timeout
             if (state.batchTimeout) {
-                clearTimeout(state.batchTimeout);
+                clearTimeout(state.batchTimeout)
             }
 
-            return state.currentOperation;
+            return state.currentOperation
         },
 
         /**
          * End ACE-style batch operation and flush changes
          */
         endBatchOperation() {
-            const state = this.operationState;
+            const state = this.operationState
 
             if (!state.isBatching) {
-                return;
+                return
             }
 
-            const operation = state.currentOperation;
+            const operation = state.currentOperation
             if (!operation) {
-                state.isBatching = false;
-                return;
+                state.isBatching = false
+                return
             }
 
             // Schedule render flush using ACE-style timing
-            this.scheduleRenderFlush();
+            this.scheduleRenderFlush()
 
-            state.isBatching = false;
-            state.currentOperation = null;
+            state.isBatching = false
+            state.currentOperation = null
         },
 
         /**
@@ -1893,46 +2135,51 @@ export default function aceEditorComponent({
          * Matches ACE's 60fps render loop scheduling
          */
         scheduleRenderFlush() {
-            const state = this.operationState;
+            const state = this.operationState
 
             if (state.batchTimeout) {
-                return; // Already scheduled
+                return // Already scheduled
             }
 
             state.batchTimeout = setTimeout(() => {
-                this.flushRenderChanges();
-                state.batchTimeout = null;
-            }, state.batchDelay);
+                this.flushRenderChanges()
+                state.batchTimeout = null
+            }, state.batchDelay)
         },
 
         /**
          * Flush render changes using ACE-style batching
          */
         flushRenderChanges() {
-            const state = this.operationState;
-            const changes = state.pendingChanges;
-            const now = performance.now();
+            const state = this.operationState
+            const changes = state.pendingChanges
+            const now = performance.now()
 
             // Throttle renders to 60fps like ACE does
-            if (now - state.lastRenderTime < 16) { // ~60fps
-                this.scheduleRenderFlush();
-                return;
+            if (now - state.lastRenderTime < 16) {
+                // ~60fps
+                this.scheduleRenderFlush()
+                return
             }
 
             try {
                 // Batch render changes based on what's pending
-                let renderFlags = 0;
+                let renderFlags = 0
 
-                if (changes.cursor) renderFlags |= 1;  // CHANGE_CURSOR
-                if (changes.selection) renderFlags |= 2;  // CHANGE_MARKER
-                if (changes.gutter) renderFlags |= 4;  // CHANGE_GUTTER
-                if (changes.scroll) renderFlags |= 8;  // CHANGE_SCROLL
-                if (changes.text) renderFlags |= 16;  // CHANGE_TEXT
-                if (changes.cursor || changes.selection) renderFlags |= 32;  // CHANGE_FULL for UI updates
+                if (changes.cursor) renderFlags |= 1 // CHANGE_CURSOR
+                if (changes.selection) renderFlags |= 2 // CHANGE_MARKER
+                if (changes.gutter) renderFlags |= 4 // CHANGE_GUTTER
+                if (changes.scroll) renderFlags |= 8 // CHANGE_SCROLL
+                if (changes.text) renderFlags |= 16 // CHANGE_TEXT
+                if (changes.cursor || changes.selection) renderFlags |= 32 // CHANGE_FULL for UI updates
 
                 // Use ACE renderer's schedule method if available
-                if (this.editor && this.editor.renderer && this.editor.renderer.$loop) {
-                    this.editor.renderer.$loop.schedule(renderFlags);
+                if (
+                    this.editor &&
+                    this.editor.renderer &&
+                    this.editor.renderer.$loop
+                ) {
+                    this.editor.renderer.$loop.schedule(renderFlags)
                 }
 
                 // Reset pending changes
@@ -1942,13 +2189,12 @@ export default function aceEditorComponent({
                     text: false,
                     scroll: false,
                     gutter: false,
-                };
+                }
 
-                state.lastRenderTime = now;
-                state.renderChanges++;
-
+                state.lastRenderTime = now
+                state.renderChanges++
             } catch (error) {
-                console.warn('Render flush failed:', error);
+                console.warn('Render flush failed:', error)
             }
         },
 
@@ -1956,61 +2202,62 @@ export default function aceEditorComponent({
          * Mark a specific change type as pending (ACE-style)
          */
         markChangePending(changeType) {
-            const state = this.operationState;
+            const state = this.operationState
 
             if (state.pendingChanges.hasOwnProperty(changeType)) {
-                state.pendingChanges[changeType] = true;
+                state.pendingChanges[changeType] = true
 
                 // Auto-start batching if not already batching
                 if (!state.isBatching) {
-                    this.startBatchOperation('auto');
+                    this.startBatchOperation('auto')
                     // Auto-end after a short delay
                     setTimeout(() => {
-                        if (state.isBatching && state.currentOperation?.type === 'auto') {
-                            this.endBatchOperation();
+                        if (
+                            state.isBatching &&
+                            state.currentOperation?.type === 'auto'
+                        ) {
+                            this.endBatchOperation()
                         }
-                    }, 0);
+                    }, 0)
                 }
             }
         },
 
-  
-    
         /**
          * ACE-style performance optimization setup
          */
         setupPerformanceOptimizations() {
-            if (!this.editor) return;
+            if (!this.editor) return
 
             try {
                 // Enable ACE's built-in optimizations
                 if (this.editor.session) {
                     // Optimize undo manager
-                    this.optimizeUndoManager();
+                    this.optimizeUndoManager()
 
                     // Enable delta merging for better performance
-                    this.editor.session.setOption('mergeUndoDeltas', 'after');
+                    this.editor.session.mergeUndoDeltas = true
 
                     // Set reasonable max undo depth
-                    const undoManager = this.editor.session.getUndoManager();
+                    const undoManager = this.editor.session.getUndoManager()
                     if (undoManager && undoManager.$undoDepth === Infinity) {
-                        undoManager.$undoDepth = 200;
+                        undoManager.$undoDepth = 200
                     }
                 }
 
                 // Optimize renderer settings
                 if (this.editor.renderer) {
                     // Enable ACE's optimized scrolling
-                    this.editor.renderer.setAnimatedScroll(true);
+                    this.editor.renderer.setAnimatedScroll(true)
 
                     // Optimize font rendering
-                    this.editor.renderer.$optimizeFontRendering = true;
+                    this.editor.renderer.$optimizeFontRendering = true
                 }
-
-                console.debug('ACE performance optimizations enabled');
-
             } catch (error) {
-                console.warn('Failed to setup performance optimizations:', error);
+                console.warn(
+                    'Failed to setup performance optimizations:',
+                    error,
+                )
             }
         },
 
@@ -2019,22 +2266,19 @@ export default function aceEditorComponent({
          * Based on ACE Editor's robust error handling patterns
          */
         setupReliabilityImprovements() {
-            if (!this.editor) return;
+            if (!this.editor) return
 
             try {
                 // Setup ACE-style error boundaries
-                this.setupErrorBoundaries();
+                this.setupErrorBoundaries()
 
                 // Setup performance monitoring
-                this.setupPerformanceMonitoring();
+                this.setupPerformanceMonitoring()
 
                 // Setup graceful degradation
-                this.setupGracefulDegradation();
-
-                console.debug('ACE reliability improvements enabled');
-
+                this.setupGracefulDegradation()
             } catch (error) {
-                console.warn('Failed to setup reliability improvements:', error);
+                console.warn('Failed to setup reliability improvements:', error)
             }
         },
 
@@ -2043,37 +2287,42 @@ export default function aceEditorComponent({
          */
         setupErrorBoundaries() {
             // Wrap critical ACE operations in try-catch blocks
-            const originalSetTheme = this.editor.setTheme.bind(this.editor);
+            const originalSetTheme = this.editor.setTheme.bind(this.editor)
             this.editor.setTheme = (...args) => {
                 try {
-                    return originalSetTheme(...args);
+                    return originalSetTheme(...args)
                 } catch (error) {
-                    console.warn('Theme setting failed, using fallback:', error);
-                    return originalSetTheme('ace/theme/textmate');
+                    console.warn('Theme setting failed, using fallback:', error)
+                    return originalSetTheme('ace/theme/textmate')
                 }
-            };
+            }
 
-            const originalSetOptions = this.editor.setOptions.bind(this.editor);
+            const originalSetOptions = this.editor.setOptions.bind(this.editor)
             this.editor.setOptions = (...args) => {
                 try {
-                    return originalSetOptions(...args);
+                    return originalSetOptions(...args)
                 } catch (error) {
-                    console.warn('Options setting failed, using defaults:', error);
-                    return originalSetOptions({});
+                    console.warn(
+                        'Options setting failed, using defaults:',
+                        error,
+                    )
+                    return originalSetOptions({})
                 }
-            };
+            }
 
             // Session error handling
             if (this.editor.session) {
-                const originalSetValue = this.editor.session.setValue.bind(this.editor.session);
+                const originalSetValue = this.editor.session.setValue.bind(
+                    this.editor.session,
+                )
                 this.editor.session.setValue = (...args) => {
                     try {
-                        return originalSetValue(...args);
+                        return originalSetValue(...args)
                     } catch (error) {
-                        console.warn('Session setValue failed:', error);
-                        return originalSetValue('');
+                        console.warn('Session setValue failed:', error)
+                        return originalSetValue('')
                     }
-                };
+                }
             }
         },
 
@@ -2082,41 +2331,40 @@ export default function aceEditorComponent({
          */
         setupPerformanceMonitoring() {
             // Monitor editor operations
-            let operationCount = 0;
-            let slowOperations = 0;
+            let operationCount = 0
+            let slowOperations = 0
 
-            const originalExecCommand = this.editor.execCommand.bind(this.editor);
+            const originalExecCommand = this.editor.execCommand.bind(
+                this.editor,
+            )
             this.editor.execCommand = (...args) => {
-                const startTime = performance.now();
-                operationCount++;
+                const startTime = performance.now()
+                operationCount++
 
                 try {
-                    const result = originalExecCommand(...args);
-                    const duration = performance.now() - startTime;
+                    const result = originalExecCommand(...args)
+                    const duration = performance.now() - startTime
 
-                    if (duration > 100) { // Operations slower than 100ms
-                        slowOperations++;
-                        console.debug(`Slow operation detected: ${args[0]} (${duration.toFixed(2)}ms)`);
+                    if (duration > 100) {
+                        // Operations slower than 100ms
+                        slowOperations++
                     }
 
-                    return result;
+                    return result
                 } catch (error) {
-                    console.warn(`Command execution failed: ${args[0]}`, error);
-                    return false;
+                    console.warn(`Command execution failed: ${args[0]}`, error)
+                    return false
                 }
-            };
+            }
 
             // Periodically report performance stats
             setInterval(() => {
                 if (operationCount > 0) {
-                    const slowRatio = (slowOperations / operationCount * 100).toFixed(1);
-                    console.debug(`Performance: ${operationCount} operations, ${slowRatio}% slow`);
-
                     // Reset counters
-                    operationCount = 0;
-                    slowOperations = 0;
+                    operationCount = 0
+                    slowOperations = 0
                 }
-            }, 30000); // Every 30 seconds
+            }, 30000) // Every 30 seconds
         },
 
         /**
@@ -2127,35 +2375,37 @@ export default function aceEditorComponent({
             const features = {
                 animatedScroll: () => {
                     try {
-                        this.editor.setOption('animatedScroll', true);
-                        return this.editor.getOption('animatedScroll');
+                        this.editor.setOption('animatedScroll', true)
+                        return this.editor.getOption('animatedScroll')
                     } catch (error) {
-                        this.editor.setOption('animatedScroll', false);
-                        return false;
+                        this.editor.setOption('animatedScroll', false)
+                        return false
                     }
                 },
 
                 liveAutocompletion: () => {
                     try {
                         // Test if live autocompletion works
-                        this.editor.setOption('enableLiveAutocompletion', true);
-                        return this.editor.getOption('enableLiveAutocompletion');
+                        this.editor.setOption('enableLiveAutocompletion', true)
+                        return this.editor.getOption('enableLiveAutocompletion')
                     } catch (error) {
-                        this.editor.setOption('enableLiveAutocompletion', false);
-                        return false;
+                        this.editor.setOption('enableLiveAutocompletion', false)
+                        return false
                     }
-                }
-            };
+                },
+            }
 
             // Test and enable/disable features based on support
             Object.entries(features).forEach(([featureName, testFeature]) => {
                 try {
-                    const supported = testFeature();
-                    console.debug(`Feature ${featureName}: ${supported ? 'enabled' : 'disabled (fallback)'}`);
+                    testFeature()
                 } catch (error) {
-                    console.warn(`Feature test failed for ${featureName}:`, error);
+                    console.warn(
+                        `Feature test failed for ${featureName}:`,
+                        error,
+                    )
                 }
-            });
+            })
         },
 
         /**
@@ -2163,50 +2413,51 @@ export default function aceEditorComponent({
          */
         performHealthCheck() {
             if (!this.editor) {
-                return { status: 'error', message: 'Editor not initialized' };
+                return { status: 'error', message: 'Editor not initialized' }
             }
 
             try {
                 const health = {
                     status: 'healthy',
-                    checks: {}
-                };
-
-                // Check session
-                health.checks.session = !!this.editor.session;
-
-                // Check renderer
-                health.checks.renderer = !!this.editor.renderer;
-
-                // Check theme
-                health.checks.theme = !!this.editor.getTheme();
-
-                // Check mode
-                health.checks.mode = !!this.editor.session.getMode();
-
-                // Check document
-                health.checks.document = !!this.editor.session.getDocument();
-
-                // Check if editor is responsive
-                const startTime = performance.now();
-                this.editor.renderer.onResize(false, true); // Test renderer responsiveness
-                health.checks.responsive = (performance.now() - startTime) < 50;
-
-                // Determine overall status
-                const failedChecks = Object.values(health.checks).filter(check => !check).length;
-                if (failedChecks > 0) {
-                    health.status = 'warning';
-                    health.message = `${failedChecks} health checks failed`;
+                    checks: {},
                 }
 
-                return health;
+                // Check session
+                health.checks.session = !!this.editor.session
 
+                // Check renderer
+                health.checks.renderer = !!this.editor.renderer
+
+                // Check theme
+                health.checks.theme = !!this.editor.getTheme()
+
+                // Check mode
+                health.checks.mode = !!this.editor.session.getMode()
+
+                // Check document
+                health.checks.document = !!this.editor.session.getDocument()
+
+                // Check if editor is responsive
+                const startTime = performance.now()
+                this.editor.renderer.onResize(false, true) // Test renderer responsiveness
+                health.checks.responsive = performance.now() - startTime < 50
+
+                // Determine overall status
+                const failedChecks = Object.values(health.checks).filter(
+                    (check) => !check,
+                ).length
+                if (failedChecks > 0) {
+                    health.status = 'warning'
+                    health.message = `${failedChecks} health checks failed`
+                }
+
+                return health
             } catch (error) {
                 return {
                     status: 'error',
                     message: `Health check failed: ${error.message}`,
-                    error: error
-                };
+                    error: error,
+                }
             }
         },
 
@@ -2215,68 +2466,64 @@ export default function aceEditorComponent({
          */
         attemptAutoRecovery() {
             try {
-                const health = this.performHealthCheck();
+                const health = this.performHealthCheck()
 
                 if (health.status === 'error') {
-                    console.warn('Attempting ACE editor auto-recovery...');
+                    console.warn('Attempting ACE editor auto-recovery...')
 
                     // Try to recover common issues
                     if (!this.editor.session) {
-                        console.warn('Recreating session...');
-                        this.editor.setSession(new ace.EditSession(''));
+                        console.warn('Recreating session...')
+                        this.editor.setSession(new ace.EditSession(''))
                     }
 
                     if (!this.editor.getTheme()) {
-                        console.warn('Resetting theme...');
-                        this.editor.setTheme('ace/theme/textmate');
+                        console.warn('Resetting theme...')
+                        this.editor.setTheme('ace/theme/textmate')
                     }
 
                     if (!this.editor.session.getMode()) {
-                        console.warn('Resetting mode...');
-                        this.editor.session.setMode('ace/mode/text');
+                        console.warn('Resetting mode...')
+                        this.editor.session.setMode('ace/mode/text')
                     }
 
                     // Check if recovery worked
-                    const recoveryHealth = this.performHealthCheck();
+                    const recoveryHealth = this.performHealthCheck()
                     if (recoveryHealth.status !== 'error') {
-                        console.log('ACE editor auto-recovery successful');
-                        return true;
+                        return true
                     } else {
-                        console.error('ACE editor auto-recovery failed');
-                        return false;
+                        console.error('ACE editor auto-recovery failed')
+                        return false
                     }
                 }
 
-                return true;
-
+                return true
             } catch (error) {
-                console.error('Auto-recovery failed:', error);
-                return false;
+                console.error('Auto-recovery failed:', error)
+                return false
             }
         },
 
-
         // Toolbar helper methods
         getButtonTitle(command) {
-            if (!this.hasToolbar || !command) return '';
+            if (!this.hasToolbar || !command) return ''
 
             // Dynamic titles for fold button
             if (command === 'toggle-fold') {
-                const foldState = this.getEfficientFoldState();
+                const foldState = this.getEfficientFoldState()
                 if (foldState.isInsideFold || foldState.canUnfold) {
-                    return 'Unfold Code (Ctrl+Alt+F)';
+                    return 'Unfold Code (Ctrl+Alt+F)'
                 } else if (foldState.canFold) {
-                    return 'Fold Code (Ctrl+Alt+F)';
+                    return 'Fold Code (Ctrl+Alt+F)'
                 } else {
-                    return 'Fold/Unfold Code';
+                    return 'Fold/Unfold Code'
                 }
             }
 
             const titles = {
-                'undo': 'Undo (Ctrl+Z)',
-                'redo': 'Redo (Ctrl+Y)',
-                'find': 'Find (Ctrl+F)',
-                'replace': 'Replace (Ctrl+H)',
+                undo: 'Undo (Ctrl+Z)',
+                redo: 'Redo (Ctrl+Y)',
+                replace: 'Find (Ctrl+F)',
                 'goto-line': 'Go To Line (Ctrl+G)',
                 'toggle-comment': 'Toggle Comment (Ctrl+/)',
                 'show-invisibles': 'Show Invisible Characters',
@@ -2284,42 +2531,45 @@ export default function aceEditorComponent({
                 'convert-uppercase': 'Convert to Uppercase',
                 'convert-lowercase': 'Convert to Lowercase',
                 'toggle-print-margin': 'Toggle Print Margin',
-            };
-            return titles[command] || command;
+            }
+            return titles[command] || command
         },
 
-    
         // Icons are now handled by CSS mask-image - no JavaScript icon generation needed
 
         getButtonDisabled(command) {
-            if (!this.editor) return true;
+            if (!this.editor) return true
 
             switch (command) {
                 case 'undo':
-                    return !this.toolbarState.canUndo;
+                    return !this.toolbarState.canUndo
                 case 'redo':
-                    return !this.toolbarState.canRedo;
+                    return !this.toolbarState.canRedo
                 default:
-                    return false;
+                    return false
             }
         },
 
         getButtonActiveState(command) {
-            if (!this.editor) return false;
+            if (!this.editor) return false
 
             switch (command) {
                 case 'toggle-print-margin':
-                    return this.toolbarState.showPrintMargin;
+                    return this.toolbarState.showPrintMargin
                 case 'show-invisibles':
-                    return this.toolbarState.showInvisibles;
+                    return this.toolbarState.showInvisibles
                 case 'toggle-wordwrap':
-                    return this.toolbarState.wordWrapEnabled;
+                    return this.toolbarState.wordWrapEnabled
                 case 'toggle-fold':
                     // Context-aware fold/unfold state for single button
-                    const foldState = this.getEfficientFoldState();
-                    return foldState.canFold || foldState.canUnfold || foldState.isInsideFold;
+                    const foldState = this.getEfficientFoldState()
+                    return (
+                        foldState.canFold ||
+                        foldState.canUnfold ||
+                        foldState.isInsideFold
+                    )
                 default:
-                    return false;
+                    return false
             }
         },
 
@@ -2333,62 +2583,92 @@ export default function aceEditorComponent({
                     canFold: false,
                     canUnfold: false,
                     isInsideFold: false,
-                };
+                }
             }
 
-            const session = this.editor.session;
-            const cursor = this.editor.getCursorPosition();
+            const session = this.editor.session
+            const cursor = this.editor.getCursorPosition()
 
             // Check if cursor position changed - if not, return cached state
-            if (this.lastFoldState.cursorRow === cursor.row &&
-                this.lastFoldState.cursorColumn === cursor.column) {
+            if (
+                this.lastFoldState.cursorRow === cursor.row &&
+                this.lastFoldState.cursorColumn === cursor.column
+            ) {
                 return {
                     canFold: this.lastFoldState.canFold,
                     canUnfold: this.lastFoldState.canUnfold,
                     isInsideFold: this.lastFoldState.isInsideFold,
-                };
+                }
             }
 
             // Use fast ACE API methods for optimal performance
-            let canFold = false;
-            let canUnfold = false;
-            let isInsideFold = false;
+            let canFold = false
+            let canUnfold = false
+            let isInsideFold = false
 
             try {
+                // Check if fold methods are available on session
+                const hasFoldSupport =
+                    session.getFoldWidget &&
+                    typeof session.getFoldWidget === 'function'
+
+                if (!hasFoldSupport) {
+                    // Session doesn't support folding, return default state
+                    return {
+                        canFold: false,
+                        canUnfold: false,
+                        isInsideFold: false,
+                    }
+                }
+
                 // Fast check 1: Is cursor on a folded line? (O(1) operation)
-                const isRowFolded = session.isRowFolded(cursor.row);
+                const isRowFolded = session.isRowFolded
+                    ? session.isRowFolded(cursor.row)
+                    : false
 
                 // Fast check 2: Is cursor inside a fold? (O(1) operation)
-                const foldAtCursor = session.getFoldAt(cursor.row, cursor.column, 1);
+                const foldAtCursor = session.getFoldAt
+                    ? session.getFoldAt(cursor.row, cursor.column, 1)
+                    : null
 
                 // Fast check 3: Get fold widget for current line (O(1) operation)
-                const foldWidget = session.getFoldWidget(cursor.row);
+                const foldWidget = session.getFoldWidget(cursor.row)
 
                 // Determine fold capabilities based on fast checks
-                isInsideFold = isRowFolded || !!foldAtCursor;
+                isInsideFold = isRowFolded || !!foldAtCursor
 
                 // Check if we can fold (line is a fold start and not already folded)
-                if (foldWidget === "start" && !isRowFolded) {
-                    const foldRange = session.getFoldWidgetRange(cursor.row, "all");
+                if (
+                    foldWidget === 'start' &&
+                    !isRowFolded &&
+                    session.getFoldWidgetRange
+                ) {
+                    const foldRange = session.getFoldWidgetRange(
+                        cursor.row,
+                        'all',
+                    )
                     if (foldRange) {
-                        canFold = true;
+                        canFold = true
                     }
                 }
 
                 // Check if we can unfold (either folded line or inside a fold)
-                if (isRowFolded || foldAtCursor || (foldWidget === "start" && isRowFolded)) {
-                    canUnfold = true;
+                if (
+                    isRowFolded ||
+                    foldAtCursor ||
+                    (foldWidget === 'start' && isRowFolded)
+                ) {
+                    canUnfold = true
                 }
 
                 // Additional check: if we're on a folded line's end, we can unfold
-                if (foldWidget === "end" && isRowFolded) {
-                    canUnfold = true;
+                if (foldWidget === 'end' && isRowFolded) {
+                    canUnfold = true
                 }
-
             } catch (error) {
-                console.warn('Fold state detection error:', error);
+                console.warn('Fold state detection error:', error)
                 // Fallback to basic state
-                return { canFold: false, canUnfold: false, isInsideFold: false };
+                return { canFold: false, canUnfold: false, isInsideFold: false }
             }
 
             // Update cache for performance
@@ -2398,105 +2678,111 @@ export default function aceEditorComponent({
                 isInsideFold,
                 cursorRow: cursor.row,
                 cursorColumn: cursor.column,
-            };
+            }
 
             return {
                 canFold,
                 canUnfold,
                 isInsideFold,
-            };
+            }
         },
 
         updateToolbarState(forceExpensiveCheck = false) {
-            if (!this.editor || !this.hasToolbar) return;
+            if (!this.editor || !this.hasToolbar) return
 
             // Clear existing timer to prevent multiple rapid updates
             if (this.debounceTimers.toolbarUpdate) {
-                clearTimeout(this.debounceTimers.toolbarUpdate);
+                clearTimeout(this.debounceTimers.toolbarUpdate)
             }
 
             // Use shorter debounce for immediate feedback (like button clicks)
-            const debounceTime = forceExpensiveCheck ? 10 : 30;
+            const debounceTime = forceExpensiveCheck ? 10 : 30
 
             // Debounce toolbar state updates to improve performance
             this.debounceTimers.toolbarUpdate = setTimeout(() => {
-                if (this.isDestroyed || !this.editor) return;
+                if (this.isDestroyed || !this.editor) return
 
                 // Use optimized undo/redo state checking with caching (performance optimization)
-                const canUndo = this.canPerformUndo();
-                const canRedo = this.canPerformRedo();
+                const canUndo = this.canPerformUndo()
+                const canRedo = this.canPerformRedo()
 
                 // Fast operations - use cached values to reduce ACE API calls
-                const showPrintMargin = this.printMarginState.showPrintMargin;
-                const wordWrapEnabled = this.editor.getSession().getUseWrapMode();
+                const showPrintMargin = this.printMarginState.showPrintMargin
+                const wordWrapEnabled = this.editor
+                    .getSession()
+                    .getUseWrapMode()
 
                 // Optimized showInvisibles check - only call ACE API if necessary
-                let showInvisibles;
-                const now = Date.now();
-                const timeSinceLastCheck = now - this.lastExpensiveState.lastCheckTime;
+                let showInvisibles
+                const now = Date.now()
+                const timeSinceLastCheck =
+                    now - this.lastExpensiveState.lastCheckTime
 
                 // Cache for 500ms to reduce expensive API calls during rapid events
                 // Use cached value unless forced to check or cache is expired
                 if (forceExpensiveCheck || timeSinceLastCheck > 500) {
-                    showInvisibles = this.editor.getShowInvisibles();
-                    this.lastExpensiveState.showInvisibles = showInvisibles;
-                    this.lastExpensiveState.lastCheckTime = now;
+                    showInvisibles = this.editor.getShowInvisibles()
+                    this.lastExpensiveState.showInvisibles = showInvisibles
+                    this.lastExpensiveState.lastCheckTime = now
                 } else {
                     // Use cached value to avoid expensive ACE API call
-                    showInvisibles = this.lastExpensiveState.showInvisibles;
+                    showInvisibles = this.lastExpensiveState.showInvisibles
                 }
 
                 // Invalidate fold cache when state changes (cursor movement, etc.)
                 // This ensures fold buttons update correctly when cursor moves or folds change
-                this.lastFoldState.cursorRow = -1;
-                this.lastFoldState.cursorColumn = -1;
+                this.lastFoldState.cursorRow = -1
+                this.lastFoldState.cursorColumn = -1
 
                 // Update fold button visual state dynamically (but not on every call)
                 if (forceExpensiveCheck || timeSinceLastCheck > 100) {
-                    this.updateFoldButtonState();
+                    this.updateFoldButtonState()
                 }
 
                 // Only update if state actually changed to prevent unnecessary Alpine re-renders
-                if (this.lastToolbarState.canUndo !== canUndo ||
+                if (
+                    this.lastToolbarState.canUndo !== canUndo ||
                     this.lastToolbarState.canRedo !== canRedo ||
                     this.lastToolbarState.showPrintMargin !== showPrintMargin ||
                     this.lastToolbarState.showInvisibles !== showInvisibles ||
-                    this.lastToolbarState.wordWrapEnabled !== wordWrapEnabled) {
-
+                    this.lastToolbarState.wordWrapEnabled !== wordWrapEnabled
+                ) {
                     // Update cached state
-                    this.lastToolbarState.canUndo = canUndo;
-                    this.lastToolbarState.canRedo = canRedo;
-                    this.lastToolbarState.showPrintMargin = showPrintMargin;
-                    this.lastToolbarState.showInvisibles = showInvisibles;
-                    this.lastToolbarState.wordWrapEnabled = wordWrapEnabled;
+                    this.lastToolbarState.canUndo = canUndo
+                    this.lastToolbarState.canRedo = canRedo
+                    this.lastToolbarState.showPrintMargin = showPrintMargin
+                    this.lastToolbarState.showInvisibles = showInvisibles
+                    this.lastToolbarState.wordWrapEnabled = wordWrapEnabled
 
                     // Update toolbar state - Alpine.js will re-render when these change
-                    this.toolbarState.canUndo = canUndo;
-                    this.toolbarState.canRedo = canRedo;
-                    this.toolbarState.showPrintMargin = showPrintMargin;
-                    this.toolbarState.showInvisibles = showInvisibles;
-                    this.toolbarState.wordWrapEnabled = wordWrapEnabled;
+                    this.toolbarState.canUndo = canUndo
+                    this.toolbarState.canRedo = canRedo
+                    this.toolbarState.showPrintMargin = showPrintMargin
+                    this.toolbarState.showInvisibles = showInvisibles
+                    this.toolbarState.wordWrapEnabled = wordWrapEnabled
                 }
-            }, debounceTime);
+            }, debounceTime)
         },
 
         /**
          * Update the fold button's visual state (icon) based on current fold state
          */
         updateFoldButtonState() {
-            if (!this.editor) return;
+            if (!this.editor) return
 
             try {
-                const foldButton = this.$el.querySelector('[data-button="toggle-fold"]');
-                if (!foldButton) return;
+                const foldButton = this.$el.querySelector(
+                    '[data-button="toggle-fold"]',
+                )
+                if (!foldButton) return
 
-                const foldState = this.getEfficientFoldState();
+                const foldState = this.getEfficientFoldState()
 
                 // Add or remove the unfold state class based on current state
                 if (foldState.isInsideFold || foldState.canUnfold) {
-                    foldButton.classList.add('fold-state-unfold');
+                    foldButton.classList.add('fold-state-unfold')
                 } else {
-                    foldButton.classList.remove('fold-state-unfold');
+                    foldButton.classList.remove('fold-state-unfold')
                 }
             } catch (error) {
                 // Silently ignore errors - fold button state update is not critical
@@ -2505,32 +2791,39 @@ export default function aceEditorComponent({
 
         // Keyboard shortcuts
         handleKeyboardShortcuts() {
-            const editor = this.editor;
+            const editor = this.editor
+
+            // Override Ctrl+F to open replace dialog instead of find
+            editor.commands.addCommand({
+                name: 'findReplace',
+                bindKey: { win: 'Ctrl-F', mac: 'Cmd-F' },
+                exec: () => this.editor.execCommand('replace'),
+            })
 
             // Add custom key bindings - use Ctrl+F11 to avoid browser conflict
             editor.commands.addCommand({
                 name: 'toggleFullscreen',
-                bindKey: {win: 'Ctrl-F11', mac: 'Cmd-F11'},
-                exec: () => this.toggleFullscreen()
-            });
+                bindKey: { win: 'Ctrl-F11', mac: 'Cmd-F11' },
+                exec: () => this.toggleFullscreen(),
+            })
 
             // Alternative key binding - Ctrl+Shift+F
             editor.commands.addCommand({
                 name: 'toggleFullscreenAlt',
-                bindKey: {win: 'Ctrl-Shift-F', mac: 'Cmd-Shift-F'},
-                exec: () => this.toggleFullscreen()
-            });
+                bindKey: { win: 'Ctrl-Shift-F', mac: 'Cmd-Shift-F' },
+                exec: () => this.toggleFullscreen(),
+            })
 
             // Escape to exit fullscreen
             editor.commands.addCommand({
                 name: 'exitFullscreen',
-                bindKey: {win: 'Esc', mac: 'Esc'},
+                bindKey: { win: 'Esc', mac: 'Esc' },
                 exec: () => {
                     if (this.isFullscreen) {
-                        this.toggleFullscreen();
+                        this.toggleFullscreen()
                     }
-                }
-            });
+                },
+            })
         },
 
         // Add global escape key handler for fullscreen
@@ -2538,88 +2831,96 @@ export default function aceEditorComponent({
             // Store bound handler for cleanup
             this._globalEscapeHandler = (e) => {
                 if (e.key === 'Escape' && this.isFullscreen) {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    this.toggleFullscreen();
+                    e.preventDefault()
+                    e.stopPropagation()
+                    this.toggleFullscreen()
                 }
-            };
+            }
 
             // Add to document with capture to ensure it runs before other handlers
-            document.addEventListener('keydown', this._globalEscapeHandler, true);
+            document.addEventListener(
+                'keydown',
+                this._globalEscapeHandler,
+                true,
+            )
         },
 
         // Initialize toolbar after editor is ready
         initToolbar() {
             if (this.hasToolbar) {
-                this.handleKeyboardShortcuts();
-                this.updateToolbarState();
+                this.handleKeyboardShortcuts()
+                this.updateToolbarState()
 
                 // Listen for selection changes to update toolbar state
                 this.editor.selection.on('changeCursor', () => {
-                    this.updateToolbarState();
-                });
+                    this.updateToolbarState()
+                })
 
                 this.editor.session.on('change', () => {
-                    this.updateToolbarState();
-                });
+                    this.updateToolbarState()
+                })
 
                 // Listen for fold changes to invalidate fold cache (performance optimization)
                 this.editor.session.on('changeFold', () => {
                     // Invalidate fold cache immediately when folds change
-                    this.lastFoldState.cursorRow = -1;
-                    this.lastFoldState.cursorColumn = -1;
-                    this.updateToolbarState();
-                });
+                    this.lastFoldState.cursorRow = -1
+                    this.lastFoldState.cursorColumn = -1
+                    this.updateToolbarState()
+                })
 
                 // Note: Undo manager doesn't have event listeners, toolbar state is updated by session and selection events
 
                 // Also listen for focus events to update toolbar state
                 this.editor.on('focus', () => {
-                    this.updateToolbarState();
-                });
+                    this.updateToolbarState()
+                })
 
                 this.editor.on('blur', () => {
-                    this.updateToolbarState();
-                });
+                    this.updateToolbarState()
+                })
             }
         },
 
         // Status Bar Methods
         initStatusBar() {
-            if (!this.editor) return;
+            if (!this.editor) return
 
             // Create status bar element
-            this.createStatusBar();
+            this.createStatusBar()
 
             // Update initial status
-            this.updateStatusBar();
+            this.updateStatusBar()
 
             // Listen for editor events to update status
-            this.editor.session.on('change', () => this.updateStatusBar());
-            this.editor.selection.on('changeCursor', () => this.updateStatusBar());
-            this.editor.session.on('changeMode', () => this.updateStatusBar());
+            this.editor.session.on('change', () => this.updateStatusBar())
+            this.editor.selection.on('changeCursor', () =>
+                this.updateStatusBar(),
+            )
+            this.editor.session.on('changeMode', () => this.updateStatusBar())
         },
 
         createStatusBar() {
             // Find or create status bar container
-            let statusBarContainer = this.$el.querySelector('.rd-ace-editor-status');
+            let statusBarContainer = this.$el.querySelector(
+                '.rd-ace-editor-status',
+            )
 
             if (!statusBarContainer) {
-                statusBarContainer = document.createElement('div');
-                statusBarContainer.className = 'rd-ace-editor-status';
+                statusBarContainer = document.createElement('div')
+                statusBarContainer.className = 'rd-ace-editor-status'
 
                 // Insert status bar after editor container
-                const editorContainer = this.$el.closest('.rd-ace-editor');
+                const editorContainer = this.$el.closest('.rd-ace-editor')
                 if (editorContainer) {
-                    editorContainer.appendChild(statusBarContainer);
+                    editorContainer.appendChild(statusBarContainer)
                 }
             }
 
-            this.statusBarElement = statusBarContainer;
+            this.statusBarElement = statusBarContainer
 
             // Apply custom classes from statusBarOptions
             if (this.statusBarOptions.className) {
-                statusBarContainer.className = `rd-ace-editor-status ${this.statusBarOptions.className}`;
+                statusBarContainer.className = `rd-ace-editor-status ${this.statusBarOptions.className}`
             }
 
             // Define default status bar sections
@@ -2629,278 +2930,320 @@ export default function aceEditorComponent({
                     content: `<div class="rd-ace-editor-status-position">
                         <span>Line: <span class="line">1</span>, Col: <span class="column">1</span></span>
                         <span class="selection"></span>
-                    </div>`
+                    </div>`,
                 },
                 info: {
                     show: true,
                     content: `<div class="rd-ace-editor-status-info">
                         <span class="mode">TEXT</span> |
                         <span class="length">0 chars</span>
-                    </div>`
-                }
-            };
+                    </div>`,
+                },
+            }
 
             // Merge with user-provided options
-            const sections = { ...defaultSections, ...this.statusBarOptions.sections };
+            const sections = {
+                ...defaultSections,
+                ...this.statusBarOptions.sections,
+            }
 
             // Build status bar content based on sections
-            let statusBarContent = '';
+            let statusBarContent = ''
             Object.entries(sections).forEach(([sectionName, sectionConfig]) => {
                 if (sectionConfig.show !== false) {
-                    statusBarContent += sectionConfig.content || '';
+                    statusBarContent += sectionConfig.content || ''
                 }
-            });
+            })
 
-            statusBarContainer.innerHTML = statusBarContent;
+            statusBarContainer.innerHTML = statusBarContent
         },
 
         updateStatusBar() {
-            if (!this.editor || !this.statusBarElement) return;
+            if (!this.editor || !this.statusBarElement) return
 
             // Clear existing timer to prevent multiple rapid updates
             if (this.debounceTimers.statusBarUpdate) {
-                clearTimeout(this.debounceTimers.statusBarUpdate);
+                clearTimeout(this.debounceTimers.statusBarUpdate)
             }
 
             // Debounce status bar updates to prevent performance issues during typing
             this.debounceTimers.statusBarUpdate = setTimeout(() => {
-                if (this.isDestroyed || !this.statusBarElement) return;
+                if (this.isDestroyed || !this.statusBarElement) return
 
-                const position = this.editor.getCursorPosition();
-                const selection = this.editor.getSelection();
-                const session = this.editor.getSession();
+                const position = this.editor.getCursorPosition()
+                const selection = this.editor.getSelection()
+                const session = this.editor.getSession()
 
                 // Cache DOM elements to avoid repeated queries
                 if (!this.statusBarElements.line) {
-                    this.statusBarElements.line = this.statusBarElement.querySelector('.line');
-                    this.statusBarElements.column = this.statusBarElement.querySelector('.column');
-                    this.statusBarElements.selection = this.statusBarElement.querySelector('.selection');
-                    this.statusBarElements.mode = this.statusBarElement.querySelector('.mode');
-                    this.statusBarElements.length = this.statusBarElement.querySelector('.length');
+                    this.statusBarElements.line =
+                        this.statusBarElement.querySelector('.line')
+                    this.statusBarElements.column =
+                        this.statusBarElement.querySelector('.column')
+                    this.statusBarElements.selection =
+                        this.statusBarElement.querySelector('.selection')
+                    this.statusBarElements.mode =
+                        this.statusBarElement.querySelector('.mode')
+                    this.statusBarElements.length =
+                        this.statusBarElement.querySelector('.length')
                 }
 
                 // Update position only if changed
-                const currentRow = position.row + 1;
-                const currentColumn = position.column + 1;
-                if (this.statusBarElements.line &&
-                    this.statusBarElements.line.textContent != currentRow) {
-                    this.statusBarElements.line.textContent = currentRow;
+                const currentRow = position.row + 1
+                const currentColumn = position.column + 1
+                if (
+                    this.statusBarElements.line &&
+                    this.statusBarElements.line.textContent != currentRow
+                ) {
+                    this.statusBarElements.line.textContent = currentRow
                 }
-                if (this.statusBarElements.column &&
-                    this.statusBarElements.column.textContent != currentColumn) {
-                    this.statusBarElements.column.textContent = currentColumn;
+                if (
+                    this.statusBarElements.column &&
+                    this.statusBarElements.column.textContent != currentColumn
+                ) {
+                    this.statusBarElements.column.textContent = currentColumn
                 }
 
                 // Update selection info only if changed
-                const selectionInfo = this.statusBarElements.selection;
+                const selectionInfo = this.statusBarElements.selection
                 if (selectionInfo) {
-                    let newText = '';
+                    let newText = ''
                     if (!selection.isEmpty()) {
-                        const lines = selection.getAllRanges().length;
-                        newText = ` (${lines} line${lines > 1 ? 's' : ''} selected)`;
+                        const lines = selection.getAllRanges().length
+                        newText = ` (${lines} line${
+                            lines > 1 ? 's' : ''
+                        } selected)`
                     }
                     if (selectionInfo.textContent !== newText) {
-                        selectionInfo.textContent = newText;
+                        selectionInfo.textContent = newText
                     }
                 }
 
                 // Update mode only if changed
-                const modeElement = this.statusBarElements.mode;
+                const modeElement = this.statusBarElements.mode
                 if (modeElement) {
-                    const mode = session.getMode().$id || 'text';
-                    const modeText = mode.replace('ace/mode/', '').toUpperCase();
+                    const mode = session.getMode().$id || 'text'
+                    const modeText = mode.replace('ace/mode/', '').toUpperCase()
                     if (modeElement.textContent !== modeText) {
-                        modeElement.textContent = modeText;
+                        modeElement.textContent = modeText
                     }
                 }
 
                 // Update document info (throttle expensive getValue() call)
-                const lengthElement = this.statusBarElements.length;
+                const lengthElement = this.statusBarElements.length
                 if (lengthElement) {
                     // Only update this every few changes to improve performance
-                    const currentLength = session.getLength();
+                    const currentLength = session.getLength()
                     if (this.statusBarState.lines !== currentLength) {
-                        const textLength = session.getValue().length;
-                        lengthElement.textContent = `${currentLength} lines, ${textLength} chars`;
-                        this.statusBarState.lines = currentLength;
+                        const textLength = session.getValue().length
+                        lengthElement.textContent = `${currentLength} lines, ${textLength} chars`
+                        this.statusBarState.lines = currentLength
                     }
                 }
-            }, 50); // 50ms debounce - responsive but not overwhelming
+            }, 50) // 50ms debounce - responsive but not overwhelming
         },
 
         destroyStatusBar() {
             if (this.statusBarElement && this.statusBarElement.parentNode) {
-                this.statusBarElement.parentNode.removeChild(this.statusBarElement);
-                this.statusBarElement = null;
+                this.statusBarElement.parentNode.removeChild(
+                    this.statusBarElement,
+                )
+                this.statusBarElement = null
             }
         },
 
         // Accessibility Methods
         initAccessibility() {
-            if (!this.editor) return;
+            if (!this.editor) return
 
             // Initialize keyboard accessibility
             if (this.keyboardAccessibility) {
-                this.initKeyboardAccessibility();
+                this.initKeyboardAccessibility()
             }
 
             // Initialize screen reader support
             if (this.screenReaderSupport) {
-                this.initScreenReaderSupport();
+                this.initScreenReaderSupport()
             }
 
             // Apply custom ARIA labels
             if (this.ariaLabels && Object.keys(this.ariaLabels).length > 0) {
-                this.applyAriaLabels();
+                this.applyAriaLabels()
             }
         },
 
         initKeyboardAccessibility() {
-            const editor = this.editor;
+            const editor = this.editor
 
             // Go To Line command with Ctrl+G shortcut
             editor.commands.addCommand({
                 name: 'gotoLine',
                 bindKey: { win: 'Ctrl+G', mac: 'Cmd+G' },
                 exec: () => {
-                    this.goToLine();
-                }
-            });
+                    this.goToLine()
+                },
+            })
 
             // Enhanced keyboard navigation
             editor.commands.addCommand({
                 name: 'gotoLineStart',
                 bindKey: { win: 'Home', mac: 'Home|Ctrl+A' },
                 exec: () => {
-                    const pos = editor.getCursorPosition();
-                    editor.moveCursorTo(pos.row, 0);
-                    editor.clearSelection();
-                }
-            });
+                    const pos = editor.getCursorPosition()
+                    editor.moveCursorTo(pos.row, 0)
+                    editor.clearSelection()
+                },
+            })
 
             editor.commands.addCommand({
                 name: 'gotoLineEnd',
                 bindKey: { win: 'End', mac: 'End|Ctrl+E' },
                 exec: () => {
-                    const pos = editor.getCursorPosition();
-                    const line = editor.session.getLine(pos.row);
-                    editor.moveCursorTo(pos.row, line.length);
-                    editor.clearSelection();
-                }
-            });
+                    const pos = editor.getCursorPosition()
+                    const line = editor.session.getLine(pos.row)
+                    editor.moveCursorTo(pos.row, line.length)
+                    editor.clearSelection()
+                },
+            })
 
             editor.commands.addCommand({
                 name: 'selectWord',
                 bindKey: { win: 'Ctrl+Shift+Right', mac: 'Cmd+Shift+Right' },
                 exec: () => {
-                    editor.selection.selectWordRight();
-                    editor.renderer.scrollCursorIntoView();
-                }
-            });
+                    editor.selection.selectWordRight()
+                    editor.renderer.scrollCursorIntoView()
+                },
+            })
 
             editor.commands.addCommand({
                 name: 'selectWordLeft',
                 bindKey: { win: 'Ctrl+Shift+Left', mac: 'Cmd+Shift+Left' },
                 exec: () => {
-                    editor.selection.selectWordLeft();
-                    editor.renderer.scrollCursorIntoView();
-                }
-            });
+                    editor.selection.selectWordLeft()
+                    editor.renderer.scrollCursorIntoView()
+                },
+            })
 
             // Enable keyboard focus management
             editor.on('focus', () => {
-                this.announceToScreenReader('Editor focused');
-            });
+                this.announceToScreenReader('Editor focused')
+            })
 
             editor.on('blur', () => {
-                this.announceToScreenReader('Editor unfocused');
-            });
+                this.announceToScreenReader('Editor unfocused')
+            })
         },
 
         initScreenReaderSupport() {
-            const editor = this.editor;
+            const editor = this.editor
 
             // Announce cursor position changes
             editor.selection.on('changeCursor', () => {
-                const pos = editor.getCursorPosition();
-                this.announceToScreenReader(`Line ${pos.row + 1}, Column ${pos.column + 1}`);
-            });
+                const pos = editor.getCursorPosition()
+                this.announceToScreenReader(
+                    `Line ${pos.row + 1}, Column ${pos.column + 1}`,
+                )
+            })
 
             // Announce selection changes
             editor.selection.on('changeSelection', () => {
-                const selection = editor.getSelection();
+                const selection = editor.getSelection()
                 if (!selection.isEmpty()) {
-                    const selectedText = editor.session.getTextRange(selection.getRange());
-                    this.announceToScreenReader(`Selected: ${selectedText.length} characters`);
+                    const selectedText = editor.session.getTextRange(
+                        selection.getRange(),
+                    )
+                    this.announceToScreenReader(
+                        `Selected: ${selectedText.length} characters`,
+                    )
                 } else {
-                    this.announceToScreenReader('Selection cleared');
+                    this.announceToScreenReader('Selection cleared')
                 }
-            });
+            })
 
             // Announce mode changes
             editor.session.on('changeMode', () => {
-                const mode = editor.session.getMode().$id || 'text';
-                this.announceToScreenReader(`Mode changed to: ${mode.replace('ace/mode/', '').toUpperCase()}`);
-            });
+                const mode = editor.session.getMode().$id || 'text'
+                this.announceToScreenReader(
+                    `Mode changed to: ${mode
+                        .replace('ace/mode/', '')
+                        .toUpperCase()}`,
+                )
+            })
 
             // Announce theme changes
             editor.on('changeTheme', () => {
-                const theme = editor.getTheme() || 'textmate';
-                this.announceToScreenReader(`Theme changed to: ${theme.replace('ace/theme/', '').replace(/_/g, ' ')}`);
-            });
+                const theme = editor.getTheme() || 'textmate'
+                this.announceToScreenReader(
+                    `Theme changed to: ${theme
+                        .replace('ace/theme/', '')
+                        .replace(/_/g, ' ')}`,
+                )
+            })
         },
 
         applyAriaLabels() {
-            const editorElement = this.$el.querySelector('.ace_editor');
-            if (!editorElement) return;
+            const editorElement = this.$el.querySelector('.ace_editor')
+            if (!editorElement) return
 
             // Apply custom ARIA labels
             Object.entries(this.ariaLabels).forEach(([element, label]) => {
-                const targetElement = this.$el.querySelector(element) || editorElement;
+                const targetElement =
+                    this.$el.querySelector(element) || editorElement
                 if (targetElement) {
-                    targetElement.setAttribute('aria-label', label);
-                    targetElement.setAttribute('role', targetElement.getAttribute('role') || 'region');
+                    targetElement.setAttribute('aria-label', label)
+                    targetElement.setAttribute(
+                        'role',
+                        targetElement.getAttribute('role') || 'region',
+                    )
                 }
-            });
+            })
 
             // Ensure editor has proper ARIA attributes
-            editorElement.setAttribute('role', 'application');
-            editorElement.setAttribute('aria-label', this.ariaLabels.editor || 'Code editor');
-            editorElement.setAttribute('aria-multiline', 'true');
+            editorElement.setAttribute('role', 'application')
+            editorElement.setAttribute(
+                'aria-label',
+                this.ariaLabels.editor || 'Code editor',
+            )
+            editorElement.setAttribute('aria-multiline', 'true')
 
             // Add ARIA attributes to textarea
-            const textarea = this.$el.querySelector('.ace_text-input');
+            const textarea = this.$el.querySelector('.ace_text-input')
             if (textarea) {
-                textarea.setAttribute('aria-label', this.ariaLabels.textarea || 'Code input area');
-                textarea.setAttribute('aria-describedby', 'ace-editor-status');
+                textarea.setAttribute(
+                    'aria-label',
+                    this.ariaLabels.textarea || 'Code input area',
+                )
+                textarea.setAttribute('aria-describedby', 'ace-editor-status')
             }
         },
 
         announceToScreenReader(message) {
-            if (!this.screenReaderSupport) return;
+            if (!this.screenReaderSupport) return
 
             // Create or update screen reader announcement element
-            let announcer = document.getElementById('ace-screen-reader-announcer');
+            let announcer = document.getElementById(
+                'ace-screen-reader-announcer',
+            )
             if (!announcer) {
-                announcer = document.createElement('div');
-                announcer.id = 'ace-screen-reader-announcer';
-                announcer.setAttribute('aria-live', 'polite');
-                announcer.setAttribute('aria-atomic', 'true');
-                announcer.style.position = 'absolute';
-                announcer.style.left = '-10000px';
-                announcer.style.width = '1px';
-                announcer.style.height = '1px';
-                announcer.style.overflow = 'hidden';
-                document.body.appendChild(announcer);
+                announcer = document.createElement('div')
+                announcer.id = 'ace-screen-reader-announcer'
+                announcer.setAttribute('aria-live', 'polite')
+                announcer.setAttribute('aria-atomic', 'true')
+                announcer.style.position = 'absolute'
+                announcer.style.left = '-10000px'
+                announcer.style.width = '1px'
+                announcer.style.height = '1px'
+                announcer.style.overflow = 'hidden'
+                document.body.appendChild(announcer)
             }
 
             // Announce the message
-            announcer.textContent = message;
+            announcer.textContent = message
 
             // Clear after announcement to allow repeated announcements
             setTimeout(() => {
-                announcer.textContent = '';
-            }, 100);
+                announcer.textContent = ''
+            }, 100)
         },
 
         /**
@@ -2908,58 +3251,58 @@ export default function aceEditorComponent({
          * Helps identify memory issues during development
          */
         changeFontSize(fontSize) {
-            if (!this.editor || !fontSize) return;
+            if (!this.editor || !fontSize) return
 
             // Update current font size
-            this.currentFontSize = fontSize;
+            this.currentFontSize = fontSize
 
             // Apply font size to ACE editor
             this.editor.setOptions({
-                fontSize: fontSize
-            });
+                fontSize: fontSize,
+            })
 
             // Force editor resize to apply changes immediately
-            this.editor.resize();
+            this.editor.resize()
         },
 
         /**
          * Change word wrap mode
          */
         changeWordWrap(wrapMode) {
-            if (!this.editor || !wrapMode) return;
+            if (!this.editor || !wrapMode) return
 
             // Update current word wrap mode
-            this.currentWordWrap = wrapMode;
+            this.currentWordWrap = wrapMode
 
             // Get the session to configure wrap settings
-            const session = this.editor.getSession();
+            const session = this.editor.getSession()
 
             switch (wrapMode) {
                 case 'off':
-                    session.setUseWrapMode(false);
-                    break;
+                    session.setUseWrapMode(false)
+                    break
                 case 'soft':
-                    session.setUseWrapMode(true);
-                    session.setWrapLimitRange(null, null); // Auto-wrap based on editor width
-                    break;
+                    session.setUseWrapMode(true)
+                    session.setWrapLimitRange(null, null) // Auto-wrap based on editor width
+                    break
                 case 'hard':
-                    session.setUseWrapMode(true);
-                    session.setWrapLimitRange(80, 80); // Hard wrap at 80 characters
-                    break;
+                    session.setUseWrapMode(true)
+                    session.setWrapLimitRange(80, 80) // Hard wrap at 80 characters
+                    break
                 default:
-                    session.setUseWrapMode(false);
-                    break;
+                    session.setUseWrapMode(false)
+                    break
             }
 
             // Force editor resize to apply changes immediately
-            this.editor.resize();
+            this.editor.resize()
         },
 
         /**
          * Apply overscroll configuration to ACE editor
          */
         applyOverscrollSettings() {
-            if (!this.editor || !this.overscrollOptions) return;
+            if (!this.editor || !this.overscrollOptions) return
 
             const defaults = {
                 enabled: true,
@@ -2967,42 +3310,46 @@ export default function aceEditorComponent({
                 behavior: 'auto',
                 horizontal: true,
                 vertical: true,
-            };
+            }
 
-            const options = { ...defaults, ...this.overscrollOptions };
+            const options = { ...defaults, ...this.overscrollOptions }
 
             if (!options.enabled) {
                 // Disable overscroll by setting size to 0
-                this.editor.renderer.setScrollMargin(0, 0, 0, 0);
-                return;
+                this.editor.renderer.setScrollMargin(0, 0, 0, 0)
+                return
             }
 
             // Configure scroll margin based on overscroll options
-            const topMargin = options.vertical ? options.size : 0;
-            const rightMargin = options.horizontal ? options.size : 0;
-            const bottomMargin = options.vertical ? options.size : 0;
-            const leftMargin = options.horizontal ? options.size : 0;
+            const topMargin = options.vertical ? options.size : 0
+            const rightMargin = options.horizontal ? options.size : 0
+            const bottomMargin = options.vertical ? options.size : 0
+            const leftMargin = options.horizontal ? options.size : 0
 
             // Apply scroll margin for overscroll effect
-            this.editor.renderer.setScrollMargin(topMargin, rightMargin, bottomMargin, leftMargin);
+            this.editor.renderer.setScrollMargin(
+                topMargin,
+                rightMargin,
+                bottomMargin,
+                leftMargin,
+            )
 
             // Configure additional overscroll behavior
             if (options.behavior === 'manual') {
                 // For manual behavior, we might need custom scroll handling
                 this.editor.session.on('changeScrollTop', () => {
                     // Custom scroll behavior can be implemented here
-                });
+                })
             }
 
             // Set editor options related to scrolling
-            const scrollOptions = {};
+            const scrollOptions = {}
 
             if (options.behavior !== 'none') {
-                scrollOptions.autoScrollEditorIntoView = true;
+                scrollOptions.autoScrollEditorIntoView = true
             }
 
-            this.editor.setOptions(scrollOptions);
+            this.editor.setOptions(scrollOptions)
         },
-
-      }
+    }
 }

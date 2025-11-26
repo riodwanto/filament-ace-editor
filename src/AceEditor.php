@@ -38,7 +38,6 @@ class AceEditor extends Field
     public const DEFAULT_TOOLBAR_BUTTONS = [
         'undo',
         'redo',
-        'find',
         'replace',
         'goto-line',
         'toggle-comment',
@@ -629,7 +628,6 @@ class AceEditor extends Field
         return [
             'undo' => 'Undo',
             'redo' => 'Redo',
-            'find' => 'Find',
             'replace' => 'Replace',
             'goto-line' => 'Go To Line',
             'toggle-comment' => 'Toggle Comment',

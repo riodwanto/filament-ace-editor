@@ -1,4 +1,5 @@
 @php
+    $effectiveHeight = $getEffectiveHeight();
     $hasInlineLabel = $hasInlineLabel();
     $isConcealed = $isConcealed();
     $isDisabled = $isDisabled();
@@ -12,13 +13,9 @@
     $completions = $getCompletions();
     $snippets = $getSnippets();
     $enableCustomCompletions = $isCustomCompletionsEnabled();
-    // Word wrap configuration
     $wordWrap = $getWordWrap();
-    // Toolbar configuration with fallback
-    $toolbarButtons = method_exists($field, 'getToolbarButtons') ? $field->getToolbarButtons() : [];
     $hasToolbar = !empty($toolbarButtons);
-    // Height configuration
-    $effectiveHeight = $getEffectiveHeight();
+    $toolbarButtons = method_exists($field, 'getToolbarButtons') ? $field->getToolbarButtons() : [];
 @endphp
 
 <x-dynamic-component :component="$getFieldWrapperView()" :field="$field">
@@ -30,7 +27,6 @@
     <div @class([
         'has-error' => $errors->has($statePath),
     ])>
-        <!-- Editor with Toolbar Inside Alpine Component -->
         <div wire:ignore x-ignore x-load
             x-load-src="{{ \Filament\Support\Facades\FilamentAsset::getAlpineComponentSrc('filament-ace-editor', 'riodwanto/filament-ace-editor') }}"
             x-data="aceEditorComponent({
@@ -67,20 +63,13 @@
             aria-labelledby="rd-ace-editor-label-{{ $statePath }}" @if ($errors->has($statePath))
             aria-describedby="rd-ace-editor-error-{{ $statePath }}" @endif @if ($isDisabled) aria-disabled="true" @endif
             {{ $getExtraInputAttributeBag()->merge([]) }}>
-            <!-- Header bar with title and fullscreen action -->
+            <!-- Header bar  -->
             @if($isHeaderEnabled())
                 <div class="rd-ace-editor-header">
                     <div class="rd-ace-editor-header-title" id="rd-ace-editor-header-title-{{ $statePath }}">
                         {{ $getHeaderTitle() }}
                     </div>
                     <div class="rd-ace-editor-header-actions">
-                        <!-- Coffee Sticker -->
-                        <a href="https://buymeacoffee.com/riodewanto" target="_blank" rel="noopener noreferrer"
-                            class="rd-ace-coffee-sticker" title="Buy me a coffee!"
-                            aria-label="Support the developer - Buy me a coffee">
-                            <img src="https://media0.giphy.com/media/v1.Y2lkPTc5MGI3NjExNWNkZjN0ZHR6Nndyc3c1eTN5MThheTQ1bGU4MWcyNnVtdzR6b3k5bSZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9cw/TDQOtnWgsBx99cNoyH/giphy.gif"
-                                alt="Buy Me a Coffee sticker" class="rd-ace-coffee-sticker-img" loading="lazy">
-                        </a>
                         <!-- Fullscreen action -->
                         <button type="button" @click="!isDisabled && toggleFullscreen()"
                             x-bind:title="isFullscreen ? 'Exit Fullscreen (Esc)' : 'Toggle Fullscreen (Ctrl+Shift+F)'"
@@ -94,7 +83,7 @@
                 </div>
             @endif
 
-            <!-- Toolbar inside Alpine component -->
+            <!-- Toolbar -->
             <div x-show="hasToolbar" x-transition class="rd-ace-editor-toolbar"
                 :class="!{{ $isHeaderEnabled() ? 'true' : 'false' }} ? 'rd-ace-toolbar-no-header' : ''" role="toolbar"
                 aria-label="Editor toolbar">
@@ -104,15 +93,14 @@
                             x-tooltip="{ content: getButtonTitle(button), theme: $store.theme }"
                             :class="`rd-ace-editor-btn rd-ace-btn-${button} rd-ace-variant-ghost rd-ace-size-sm ${getButtonActiveState(button) ? 'rd-ace-btn-active' : ''} rd-ace-focus-ring`"
                             :disabled="getButtonDisabled(button) || isDisabled" :aria-label="getButtonTitle(button)"
-                            :data-button="button" :title="getButtonTitle(button)">
+                            :data-button="button">
                             <span class="sr-only" x-text="getButtonTitle(button)"></span>
                         </button>
                     </template>
                 </div>
 
-                <!-- Toolbar controls container -->
                 <div class="rd-ace-editor-toolbar-controls" role="group" aria-label="Editor settings">
-                    <!-- Word wrap selector -->
+                    <!-- Word wrap -->
                     <div class="rd-ace-editor-control">
                         <label for="word-wrap-select-{{ $statePath }}">Word Wrap</label>
                         <select id="word-wrap-select-{{ $statePath }}" x-model="currentWordWrap"
@@ -124,7 +112,7 @@
                         </select>
                     </div>
 
-                    <!-- Font size selector -->
+                    <!-- Font size -->
                     <div class="rd-ace-editor-control">
                         <label for="font-size-select-{{ $statePath }}">Font Size</label>
                         <select id="font-size-select-{{ $statePath }}" x-model="currentFontSize"
@@ -140,7 +128,7 @@
                 </div>
             </div>
 
-            <!-- ACE Editor -->
+            <!-- Editor -->
             <div class="rd-ace-editor-wrapper">
                 <div x-ref="aceCodeEditorInner" id="rd-ace-editor-content-{{ $statePath }}" @class([
                     'rd-ace-editor-content rd-ace-transition',
@@ -156,7 +144,6 @@
 ]) role="application" aria-label="Code editor content"
                     aria-multiline="true" tabindex="0" {{ $getExtraInputAttributeBag() }}></div>
 
-                <!-- Buy Me Coffee Widget - Bottom Right -->
                 <div class="rd-ace-coffee-widget">
                     <a href="https://buymeacoffee.com/riodewanto" target="_blank" rel="noopener noreferrer"
                         class="rd-ace-coffee-widget-link" title="Buy me a coffee! ☕"
