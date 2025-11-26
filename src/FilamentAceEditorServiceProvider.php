@@ -73,8 +73,8 @@ class FilamentAceEditorServiceProvider extends PackageServiceProvider
     {
         return [
             AlpineComponent::make('filament-ace-editor', __DIR__ . '/../resources/dist/filament-ace-editor.js'),
-            Css::make('filament-ace-editor', __DIR__ . '/../resources/css/index.css'),
-            // Css::make('filament-ace-editor', __DIR__ . '/../resources/dist/filament-ace-editor.css'),
+            Css::make('filament-ace-editor', __DIR__ . '/../resources/dist/filament-ace-editor.css'),
+            // Css::make('filament-ace-editor', __DIR__ . '/../resources/css/index.css'),
         ];
     }
 
