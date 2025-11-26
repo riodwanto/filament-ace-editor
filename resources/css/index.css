@@ -1,6 +1,6 @@
-/* @reference 'tailwindcss';
+@reference 'tailwindcss';
 @reference '../../vendor/filament/filament/dist/theme.css';
-@reference '../../vendor/filament/support/resources/css/index.css'; */
+@reference '../../vendor/filament/support/resources/css/index.css';
 
 @custom-variant dark (&:where(.dark, .dark *));
 
