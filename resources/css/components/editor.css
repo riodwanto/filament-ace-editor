@@ -59,7 +59,7 @@
     }
 
     .rd-ace-coffee-widget-content {
-        @apply flex flex-col items-center gap-1 bg-transparent backdrop-blur-sm rounded-lg p-2;
+        @apply flex flex-col items-center gap-1 bg-transparent w-fit;
     }
 
     .rd-ace-coffee-widget-gif {
