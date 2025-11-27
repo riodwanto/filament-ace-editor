@@ -1,0 +1,98 @@
+/* Base Editor Component */
+.rd-ace-editor {
+    @apply relative overflow-hidden transition duration-75 bg-white rounded-lg shadow-sm ring-1 ring-gray-950/10 dark:bg-gray-900 dark:border-gray-700 focus-within:border-primary-600;
+
+    &:focus-within {
+        @apply ring-2 ring-primary-600/20;
+    }
+
+    &.has-error {
+        @apply border-danger-500 ring-2 ring-danger-500/20 dark:border-danger-400 dark:ring-danger-400/20;
+    }
+
+    &.rd-ace-editor-disabled {
+        @apply bg-gray-100 opacity-75 cursor-not-allowed dark:bg-gray-800;
+
+        .rd-ace-editor-content {
+            @apply pointer-events-none;
+        }
+    }
+}
+
+.rd-ace-editor-content {
+    @apply transition-colors duration-200 bg-white border border-gray-200 dark:bg-gray-900 dark:border-gray-700;
+}
+
+.rd-ace-editor-content.rd-ace-content-with-header {
+    @apply border-t-0 rounded-t-none;
+}
+
+.rd-ace-editor-content.rd-ace-content-with-toolbar {
+    @apply border-t-0;
+}
+
+.rd-ace-editor-content.rd-ace-content-no-toolbar.rd-ace-content-no-header {
+    @apply rounded-t-lg rounded-b-lg;
+}
+
+.rd-ace-editor-content.rd-ace-content-without-status {
+    @apply rounded-b-lg;
+}
+
+.rd-ace-editor-wrapper {
+    @apply relative w-full h-full;
+}
+
+.rd-ace-toolbar-no-header {
+    @apply rounded-t-lg;
+}
+
+.rd-ace-coffee-widget {
+    @apply absolute bottom-2 right-2 z-10;
+
+    .rd-ace-coffee-widget-link {
+        @apply block no-underline transition-all duration-300 hover:scale-105;
+
+        &:active {
+            @apply scale-95;
+        }
+    }
+
+    .rd-ace-coffee-widget-content {
+        @apply flex flex-col items-center gap-1 bg-transparent w-fit;
+    }
+
+    .rd-ace-coffee-widget-gif {
+        @apply w-12 h-12 rounded-md object-cover;
+    }
+}
+
+/* Dark mode specific adjustments */
+@media (prefers-color-scheme: dark) {
+    .rd-ace-coffee-widget .rd-ace-coffee-widget-content {
+        @apply bg-gray-800/95 border-gray-700/50;
+
+        &:hover {
+            @apply bg-gray-800;
+        }
+    }
+}
+
+/* Responsive adjustments */
+@media (max-width: 640px) {
+    .rd-ace-coffee-widget {
+        @apply bottom-2 right-2;
+
+        .rd-ace-coffee-widget-gif {
+            @apply w-8 h-8;
+        }
+
+        .rd-ace-coffee-widget-text {
+            @apply hidden;
+        }
+
+        .rd-ace-coffee-widget-content {
+            @apply p-1;
+        }
+    }
+}

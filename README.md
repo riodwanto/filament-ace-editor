@@ -14,7 +14,7 @@ Ace Editor implementation for Filament Form.
 
 | Package Version | Filament Version | Status |
 |:---------------:|:----------------:|:--------:|
-| **4.x**         | **4.x**          | **Latest ✨** |
+| 4.1.0       | 4.x          | Latest ✨ |
 | 1.x             | 3.x              | Stable ✅ |
 
 Choose the package version that matches your Filament installation. We recommend using the latest compatible version for the best features and security updates.
@@ -39,12 +39,24 @@ public function form(Form $form): Form
     return $form
         ->schema([
             ...
-            AceEditor::make('code-editor')
+            AceEditor::make('code_editor')
+                ->label('Code Editor')
                 ->mode('php')
                 ->theme('github')
-                ->darkTheme('dracula'),
-        ])
-
+                ->darkTheme('dracula')
+                ->fontSize('14px')
+                ->cursorStyle('smooth')
+                ->softWrap('free')
+                ->tabSize(4)
+                ->useSoftTabs(true)
+                ->addExtensions(['language_tools', 'beautify'])
+                ->customCompletions([
+                    'php' => [
+                        ['caption' => 'dd()', 'value' => 'dd(${1:variable});', 'meta' => 'Laravel debug helper'],
+                        ['caption' => 'collect()', 'value' => 'collect(${1:array});', 'meta' => 'Laravel collection'],
+                    ]
+                ]),
+        ]);
 }
 ```
 
@@ -60,6 +72,15 @@ public function form(Form $form): Form
 | editorConfig     | editor config will be initialize after `ace` loaded. (it is config that used in `ace.config`)               |
 | editorOptions    | editor options used in `ace.editor.options`, you can set additional ace option here.                        |
 | addExtensions    | by default, not all options available in `editorOptions`. you must enable extension first with this method. |
+| headerTitle| Editor tittle                                            |
+| fontSize         | Set font size using string (px, rem, em) or integer                                                           |
+| cursorStyle      | Set cursor style: ace, slim, smooth, wide, smooth-slim                                                         |
+| softWrap         | Control text wrapping behavior: off, free, printMargin, textWidth                                             |
+| showGutter       | Show/hide line numbers and breakpoints                                                                         |
+| showPrintMargin  | Show/hide vertical print margin line                                                                          |
+| foldStyle        | Set code folding style: manual, markbegin, markbeginend                                                        |
+| tabSize          | Set tab size for indentation                                                                                   |
+| useSoftTabs      | Use spaces instead of tabs for indentation                                                                     |
 
 All default values can be found in the [Configuration section](#config) below.
 
@@ -77,7 +98,7 @@ You can publish the config file with:
 php artisan vendor:publish --tag="filament-ace-editor-config"
 ```
 
-###### config
+#### Configuration
 
 This is the contents of the published config file:
 
@@ -85,12 +106,13 @@ This is the contents of the published config file:
 return [
     ...
 
-    // Initialization ACE config
+    'base_url' => 'https://cdnjs.cloudflare.com/ajax/libs/ace/1.43.3',
+    'file' => 'ace.js',
+
     'editor_config' => [
         'useWorker' => false
     ],
 
-    // Editor options
     'editor_options' => [
         'mode' => 'ace/mode/php',
         'theme' => 'ace/theme/eclipse',
@@ -100,8 +122,13 @@ return [
         'liveAutocompletionThreshold' => 0,
         'enableSnippets' => true,
         'enableInlineAutocompletion' => true,
-        'showPrintMargin' => false,
-        'wrap' => 'free'
+        'showPrintMargin' => true,
+        'wrap' => 'off',
+        'animatedScroll' => false,
+        'fadeFoldWidgets' => false,
+        'displayIndentGuides' => false,
+        'highlightGutterLine' => false,
+        'showInvisibles' => false,
     ],
 
     'dark_mode' => [
@@ -113,8 +140,12 @@ return [
         'beautify',
         'language_tools',
         'inline_autocomplete',
+        'rtl',
+        'statusbar',
+        'whitespace',
+        'searchbox',
     ],
-    
+
     ...
 ];
 ```

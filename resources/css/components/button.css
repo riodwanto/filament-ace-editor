@@ -1,0 +1,114 @@
+/* Button Component */
+.rd-ace-editor-btn {
+    @apply relative inline-grid grid-flow-col items-center justify-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium transition duration-75 outline-none;
+    @apply focus-visible:ring-2;
+    @apply disabled:pointer-events-none disabled:cursor-default disabled:opacity-70;
+
+    &.rd-ace-size-xs { @apply gap-1 px-2 py-1.5 text-xs h-6 min-w-6; }
+    &.rd-ace-size-sm { @apply gap-1 px-2.5 py-1.5 text-sm h-8 min-w-8; }
+    &.rd-ace-size-md { @apply gap-1.5 px-3 py-2 text-sm h-9 min-w-9; }
+    &.rd-ace-size-lg { @apply gap-1.5 px-3.5 py-2.5 text-sm h-10 min-w-10; }
+
+    /* Default variant - outlined style */
+    &.rd-ace-variant-outlined {
+        @apply bg-white border border-gray-200 shadow-sm text-gray-950 ring-1 ring-gray-300 dark:text-white dark:ring-gray-700 dark:bg-gray-900 dark:border-gray-700;
+    }
+
+    /* Ghost variant - transparent background */
+    &.rd-ace-variant-ghost {
+        @apply hover:bg-gray-50 focus-visible:bg-gray-50;
+        @apply dark:hover:bg-white/5 dark:focus-visible:bg-white/5;
+    }
+
+    /* Active state */
+    &.rd-ace-btn-active,
+    &.active {
+        @apply bg-gray-100 dark:bg-gray-800 text-primary-600 dark:text-primary-400;
+    }
+
+    /* Focus ring */
+    &:focus-visible {
+        @apply focus:ring-2 focus:ring-offset-1 focus:ring-primary-600/20;
+    }
+
+    /* Icon styling */
+    & > .rd-icon {
+        @apply text-gray-400 transition duration-75 dark:text-gray-500;
+        @apply w-4 h-4;
+    }
+}
+
+/* Specialized button states */
+.rd-ace-editor-btn:disabled {
+    @apply cursor-default pointer-events-none opacity-70;
+}
+
+.rd-ace-editor-btn::before {
+    content: '';
+    @apply block w-4 h-4 transition-colors duration-150;
+    background-color: currentColor;
+    mask-size: contain;
+    mask-repeat: no-repeat;
+    mask-position: center;
+}
+
+.rd-ace-editor-btn:hover:not(:disabled)::before {
+    background-color: currentColor;
+}
+
+.rd-ace-editor-btn svg {
+    @apply hidden; /* Hide SVG in favor of mask-image icons */
+}
+
+/* Toolbar button icons */
+.rd-ace-btn-undo::before {
+    mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2'%3E%3Cpath d='M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6'/%3E%3C/svg%3E");
+}
+
+.rd-ace-btn-redo::before {
+    mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2'%3E%3Cpath d='M21 10h-10a8 8 0 00-8 8v2M21 10l-6 6m6-6l-6-6'/%3E%3C/svg%3E");
+}
+
+.rd-ace-btn-find::before {
+    mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2'%3E%3Ccircle cx='11' cy='11' r='8'/%3E%3Cpath d='m21 21-4.35-4.35'/%3E%3C/svg%3E");
+}
+
+.rd-ace-btn-replace::before {
+    mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2'%3E%3Ccircle cx='11' cy='11' r='8'/%3E%3Cpath d='m21 21-4.35-4.35'/%3E%3C/svg%3E");
+}
+
+.rd-ace-btn-goto-line::before {
+    mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2'%3E%3Cpath d='M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6'/%3E%3Cpath d='M13 2h3a2 2 0 012 2v3'/%3E%3Cline x1='12' y1='22' x2='12' y2='16'/%3E%3Cline x1='8' y1='22' x2='16' y2='22'/%3E%3C/svg%3E");
+}
+
+.rd-ace-btn-toggle-comment::before {
+    mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2'%3E%3Cpath d='M4 12h16M4 6h16M4 18h7'/%3E%3Cpath d='M9 14h6M9 10h6'/%3E%3Cpath d='M20 2H4c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z'/%3E%3C/svg%3E");
+}
+
+.rd-ace-btn-fullscreen::before {
+    mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2'%3E%3Cpath d='M8 3H5a2 2 0 00-2 2v3m18 0V5a2 2 0 00-2-2h-3m0 18h3a2 2 0 002-2v-3M3 16v3a2 2 0 002 2h3'/%3E%3C/svg%3E");
+}
+
+.rd-ace-btn-toggle-fold::before {
+    mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2'%3E%3Cpath d='M10 6h4a2 2 0 012 2v8a2 2 0 01-2 2h-4a2 2 0 01-2-2V8a2 2 0 012-2z'/%3E%3Cpath d='M4 12h16'/%3E%3C/svg%3E");
+}
+
+.rd-ace-btn-show-invisibles::before {
+    mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2'%3E%3Ccircle cx='12' cy='12' r='3'/%3E%3Cpath d='M12 1v6m0 6v6m4.22-13.22l4.24 4.24M1.54 1.54l4.24 4.24M20.46 20.46l-4.24-4.24M1.54 20.46l4.24-4.24'/%3E%3C/svg%3E");
+}
+
+.rd-ace-btn-toggle-wordwrap::before {
+    mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2'%3E%3Cpolyline points='4 7 4 4 20 4 20 7'/%3E%3Cline x1='9' y1='20' x2='15' y2='20'/%3E%3Cline x1='12' y1='4' x2='12' y2='20'/%3E%3C/svg%3E");
+}
+
+.rd-ace-btn-convert-uppercase::before {
+    mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2'%3E%3Cpolyline points='7 11 9 13 17 5'/%3E%3Cpath d='M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11'/%3E%3Cpath d='M12 3v9'/%3E%3Cpath d='M9 6h6'/%3E%3C/svg%3E");
+}
+
+.rd-ace-btn-convert-lowercase::before {
+    mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2'%3E%3Cpath d='M3 7V5a2 2 0 012-2h14a2 2 0 012 2v12a2 2 0 01-2 2h-4'/%3E%3Cpolyline points='3 7 12 16 21 7'/%3E%3Cline x1='8' y1='11' x2='16' y2='11'/%3E%3Cline x1='8' y1='15' x2='16' y2='15'/%3E%3C/svg%3E");
+}
+
+.rd-ace-btn-toggle-print-margin::before {
+    mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2'%3E%3Cpath d='M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z'/%3E%3Cpolyline points='14 2 14 8 20 8'/%3E%3Cline x1='16' y1='13' x2='8' y2='13'/%3E%3Cline x1='16' y1='17' x2='8' y2='17'/%3E%3Cpolyline points='10 9 9 9 8 9'/%3E%3C/svg%3E");
+}

@@ -34,6 +34,7 @@ class FilamentAceEditorServiceProvider extends PackageServiceProvider
 
     public function packageRegistered(): void
     {
+        parent::packageRegistered();
     }
 
     public function packageBooted(): void
@@ -73,6 +74,7 @@ class FilamentAceEditorServiceProvider extends PackageServiceProvider
         return [
             AlpineComponent::make('filament-ace-editor', __DIR__ . '/../resources/dist/filament-ace-editor.js'),
             Css::make('filament-ace-editor', __DIR__ . '/../resources/dist/filament-ace-editor.css'),
+            // Css::make('filament-ace-editor', __DIR__ . '/../resources/css/index.css'),
         ];
     }
 

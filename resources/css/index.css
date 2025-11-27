@@ -1,20 +1,70 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@reference 'tailwindcss';
+@reference '../../vendor/filament/filament/dist/theme.css';
+@reference '../../vendor/filament/support/resources/css/index.css';
 
-.ace-editor-wrapper {
-    @apply relative rounded-md shadow-sm ring-1 focus-within:!ring-2 focus-within:!ring-blue-600;
+@custom-variant dark (&:where(.dark, .dark *));
+
+@import './base.css' layer(base);
+@import './utilities.css' layer(utilities);
+
+@import './components/editor.css' layer(components);
+@import './components/button.css' layer(components);
+@import './components/header.css' layer(components);
+@import './components/toolbar.css' layer(components);
+@import './components/status.css' layer(components);
+@import './components/fullscreen.css' layer(components);
+@import './components/responsive.css' layer(components);
+
+.rd-ace-editor {
+    /* Styles inherited from .fi-ace-editor */
+    @apply relative overflow-hidden transition duration-75 bg-white rounded-lg shadow-sm ring-1 ring-gray-950/10 dark:bg-gray-900 dark:border-gray-600 focus-within:border-primary-600;
+
+    &:focus-within {
+        @apply ring-2 ring-primary-600;
+    }
+
+    &.has-error {
+        @apply border-danger-500 ring-2 ring-danger-500/20 dark:border-danger-400 dark:ring-danger-400/20;
+    }
+
+    &.rd-ace-editor-disabled {
+        @apply bg-gray-100 opacity-75 cursor-not-allowed dark:bg-gray-800;
+    }
 }
 
-.ace-editor-wrapper.base {
-    @apply ring-gray-300 dark:ring-gray-600;
+/* ACE Editor specific styles */
+.ace_print-margin {
+    transform: translateZ(0);
+    will-change: transform, opacity;
+    backface-visibility: hidden;
+    transition:
+        opacity 0.1s ease-out,
+        transform 0.1s ease-out;
 }
 
-.ace-editor-wrapper.danger {
-    @apply ring-red-600 dark:ring-red-500;
+.dark .ace_print-margin {
+    opacity: 0.8;
 }
 
-.ace-editor {
-    @apply w-full h-full rounded-md;
+.ace_editor:focus .ace_print-margin {
+    opacity: 1;
 }
 
+/* Coffee sticker - Special feature styling */
+.rd-ace-coffee-sticker {
+    @apply absolute z-10 no-underline bg-transparent bottom-11 right-5;
+}
+
+.rd-ace-coffee-sticker:hover {
+    @apply no-underline;
+}
+
+.rd-ace-coffee-sticker-img {
+    @apply object-cover w-full h-12 transition-transform duration-200 ease-in-out border rounded-lg shadow-lg opacity-90;
+    border-color: hsl(var(--border));
+
+    &:hover {
+        @apply scale-105 shadow-xl;
+        border-color: hsl(var(--primary));
+    }
+}

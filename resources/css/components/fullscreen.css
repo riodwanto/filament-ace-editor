@@ -1,0 +1,32 @@
+/* Fullscreen Mode */
+.rd-ace-editor.rd-ace-editor--fullscreen {
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    bottom: 0 !important;
+    z-index: 9999 !important;
+    width: 100vw !important;
+    height: 100vh !important;
+    @apply flex flex-col overflow-hidden transition-all duration-200 ease-out scale-100 bg-white opacity-100 dark:bg-gray-900;
+
+    .rd-ace-editor-content {
+        @apply flex-1 border-none rounded-none;
+        height: 100% !important;
+        min-height: 100% !important;
+    }
+
+    .rd-ace-editor-header {
+        @apply border-b border-gray-200 dark:border-gray-700 shrink-0;
+        border-radius: 0;
+    }
+
+    .rd-ace-editor-toolbar {
+        @apply border-b border-gray-200 dark:border-gray-700 shrink-0;
+    }
+
+    .rd-ace-editor-status {
+        @apply border-t border-gray-200 dark:border-gray-700 shrink-0;
+        border-radius: 0;
+    }
+}
