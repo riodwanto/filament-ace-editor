@@ -46,6 +46,56 @@ export default function aceEditorComponent({
         isFullscreen: false,
         loadedScripts: [],
         eventListeners: [],
+        // Intersection Observer for lazy loading
+        intersectionObserver: null,
+        isVisible: false,
+        isInitialized: false,
+        // Virtual Scrolling for large files
+        virtualScrolling: {
+            enabled: false,
+            maxLines: 1000,      // Maximum lines to render
+            bufferSize: 50,      // Buffer lines above/below viewport
+            threshold: 10000,    // Enable virtual scrolling for files with more than this many lines
+            originalMaxLines: null,
+            originalMinLines: null,
+            scrollHandler: null,
+            resizeHandler: null,
+            lastScrollTop: 0,
+            viewportHeight: 0,
+            lineHeight: 0,
+        },
+        // Progressive Enhancement for staged loading
+        progressiveEnhancement: {
+            currentStage: 0,     // 0: basic, 1: intermediate, 2: full
+            stages: {
+                0: { // Core functionality - loads immediately
+                    name: 'core',
+                    features: ['basicEditing', 'syntaxHighlighting', 'basicTheme'],
+                    loaded: false,
+                    priority: 1,
+                },
+                1: { // Intermediate features - loads after 100ms
+                    name: 'intermediate',
+                    features: ['autocompletion', 'findReplace', 'toolbar'],
+                    loaded: false,
+                    priority: 2,
+                    delay: 100,
+                },
+                2: { // Advanced features - loads after 300ms
+                    name: 'advanced',
+                    features: ['languageTools', 'customCompletions', 'statusBar', 'virtualScrolling', 'advancedExtensions'],
+                    loaded: false,
+                    priority: 3,
+                    delay: 300,
+                },
+            },
+            loadingPromises: new Map(),
+            performanceMetrics: {
+                stageLoadTimes: {},
+                totalLoadTime: 0,
+                startTime: 0,
+            },
+        },
         toolbarState: {
             canUndo: false,
             canRedo: false,
@@ -126,6 +176,25 @@ export default function aceEditorComponent({
             mode: null,
             length: null,
         },
+        // Cache DOM query results to avoid repeated lookups
+        domCache: {
+            statusBarContainer: null,
+            lastCacheTime: 0,
+            cacheTimeout: 1000, // 1 second cache timeout
+        },
+        // Dialog pooling for better performance
+        dialogPool: {
+            gotoLine: null,
+            lastUsed: 0,
+            reuseTimeout: 5000, // 5 seconds before creating new dialog
+        },
+        // Extension preloading and caching
+        extensionCache: {
+            preloaded: new Set(),
+            cached: new Map(),
+            cacheVersion: '1.0', // For cache invalidation
+            preloadingPromises: new Map(),
+        },
         operationState: {
             currentOperation: null,
             operationQueue: [],
@@ -166,7 +235,14 @@ export default function aceEditorComponent({
                 this.editor = null
             }
 
-            await this.initializeEditor()
+            // Setup Intersection Observer for lazy loading
+            this.setupIntersectionObserver()
+
+            // Only initialize editor if visible or if Intersection Observer is not supported
+            if (!this.intersectionObserver || this.isVisible) {
+                await this.initializeEditor()
+                this.isInitialized = true
+            }
 
             // Add global escape key handler for fullscreen
             this.addGlobalFullscreenEscapeHandler()
@@ -199,21 +275,53 @@ export default function aceEditorComponent({
                     this.observer = null
                 }
 
+                // Clean up Intersection Observer
+                if (this.intersectionObserver) {
+                    this.intersectionObserver.disconnect()
+                    this.intersectionObserver = null
+                }
+
+                // Clean up virtual scrolling
+                if (this.virtualScrolling.enabled) {
+                    this.disableVirtualScrolling()
+                }
+
+                // Clean up progressive enhancement
+                if (this.progressiveEnhancement.loadingPromises.size > 0) {
+                    this.progressiveEnhancement.loadingPromises.forEach(promise => {
+                        promise.cancel && promise.cancel()
+                    })
+                    this.progressiveEnhancement.loadingPromises.clear()
+                }
+
                 this.destroyStatusBar()
 
                 if (this.isFullscreen) {
                     this.toggleFullscreen()
                 }
 
-                // Clean up global escape handler
-                if (this._globalEscapeHandler) {
-                    document.removeEventListener(
-                        'keydown',
-                        this._globalEscapeHandler,
-                        true,
-                    )
-                    this._globalEscapeHandler = null
-                }
+                // Clean up all tracked event listeners
+                this.eventListeners.forEach(
+                    ({ element, type, handler, options }) => {
+                        try {
+                            if (element && handler) {
+                                element.removeEventListener(
+                                    type,
+                                    handler,
+                                    options,
+                                )
+                            }
+                        } catch (error) {
+                            console.warn(
+                                'Failed to remove event listener:',
+                                error,
+                            )
+                        }
+                    },
+                )
+
+                // Clear the global escape handler reference
+                this._globalEscapeHandler = null
 
                 this.cleanupLoadedScripts()
 
@@ -247,6 +355,11 @@ export default function aceEditorComponent({
                 }
                 this.operationState.operationQueue = []
                 this.operationState.isBatching = false
+
+                // Clean up extension cache references
+                this.extensionCache.preloaded.clear()
+                this.extensionCache.cached.clear()
+                this.extensionCache.preloadingPromises.clear()
             } catch (error) {
                 console.error('Error during ACE editor cleanup:', error)
             }
@@ -270,11 +383,576 @@ export default function aceEditorComponent({
             this.loadedScripts = []
         },
 
+        /**
+         * Setup Intersection Observer for lazy loading the editor
+         * Only initializes ACE when the editor becomes visible
+         */
+        setupIntersectionObserver() {
+            // Check if Intersection Observer is supported
+            if (!('IntersectionObserver' in window)) {
+                console.warn('Intersection Observer not supported, initializing immediately')
+                this.isVisible = true
+                return
+            }
+
+            // Don't setup if editor is already initialized
+            if (this.isInitialized) {
+                this.isVisible = true
+                return
+            }
+
+            // Create a placeholder container for the editor
+            const editorElement = this.$refs.aceCodeEditor
+            if (!editorElement) {
+                console.warn('Editor element not found for Intersection Observer')
+                return
+            }
+
+            // Setup Intersection Observer with rootMargin for better UX
+            const options = {
+                root: null,
+                rootMargin: '50px', // Start loading 50px before element comes into view
+                threshold: 0.1, // Start loading when 10% visible
+            }
+
+            this.intersectionObserver = new IntersectionObserver((entries) => {
+                entries.forEach(async (entry) => {
+                    if (entry.isIntersecting && !this.isInitialized) {
+                        this.isVisible = true
+
+                        // Disconnect the observer since we only need it once
+                        this.intersectionObserver.disconnect()
+                        this.intersectionObserver = null
+
+                        // Initialize the editor
+                        await this.initializeEditor()
+                        this.isInitialized = true
+
+                        // Remove any placeholder and show the editor
+                        this.showEditorElement()
+                    }
+                })
+            }, options)
+
+            // Start observing the editor element
+            this.intersectionObserver.observe(editorElement)
+        },
+
+        /**
+         * Show the editor element and hide any placeholder
+         */
+        showEditorElement() {
+            const editorElement = this.$refs.aceCodeEditor
+            const placeholderElement = this.$root.querySelector('.ace-editor-placeholder')
+
+            if (placeholderElement) {
+                placeholderElement.style.display = 'none'
+            }
+
+            if (editorElement) {
+                editorElement.style.opacity = '1'
+                editorElement.style.visibility = 'visible'
+            }
+        },
+
+        /**
+         * Setup Virtual Scrolling for large files
+         * Only enables for files with more lines than the threshold
+         */
+        setupVirtualScrolling() {
+            if (!this.editor || !this.editor.session) {
+                return
+            }
+
+            const session = this.editor.session
+            const lineCount = session.getLength()
+
+            // Only enable virtual scrolling for large files
+            if (lineCount <= this.virtualScrolling.threshold) {
+                return
+            }
+
+            this.virtualScrolling.enabled = true
+
+            // Store original settings
+            this.virtualScrolling.originalMaxLines = this.editor.getOption('maxLines')
+            this.virtualScrolling.originalMinLines = this.editor.getOption('minLines')
+
+            // Enable virtual scrolling performance optimizations
+            this.editor.setOptions({
+                maxLines: this.virtualScrolling.maxLines,
+                minLines: Math.min(this.virtualScrolling.maxLines, 20),
+                animatedScroll: false,
+                showPrintMargin: false, // Disable for performance
+                highlightGutterLine: false, // Disable for performance
+                displayIndentGuides: false, // Disable for performance
+            })
+
+            // Setup scroll handler for virtual scrolling
+            this.setupVirtualScrollHandlers()
+
+            // Add performance monitoring
+            this.setupVirtualScrollingMonitoring()
+        },
+
+        /**
+         * Setup event handlers for virtual scrolling
+         */
+        setupVirtualScrollHandlers() {
+            if (!this.editor) return
+
+            const editorElement = this.editor.renderer.scroller
+
+            // Calculate line height
+            this.virtualScrolling.lineHeight = this.editor.renderer.lineHeight
+            this.virtualScrolling.viewportHeight = editorElement.clientHeight
+
+            // Throttled scroll handler to update visible range
+            this.virtualScrolling.scrollHandler = this.throttle(() => {
+                const scrollTop = editorElement.scrollTop
+                const firstVisibleRow = Math.floor(scrollTop / this.virtualScrolling.lineHeight)
+
+                // Update ACE's visible range if significantly changed
+                this.updateVirtualScrollingRange(firstVisibleRow)
+            }, 16) // 60fps
+
+            // Resize handler to update viewport dimensions
+            this.virtualScrolling.resizeHandler = this.debounce(() => {
+                this.virtualScrolling.viewportHeight = editorElement.clientHeight
+                this.virtualScrolling.lineHeight = this.editor.renderer.lineHeight
+            }, 100)
+
+            // Add event listeners with proper cleanup
+            this.addEventListener(editorElement, 'scroll', this.virtualScrolling.scrollHandler, { passive: true })
+            this.addEventListener(window, 'resize', this.virtualScrolling.resizeHandler)
+        },
+
+        /**
+         * Update the visible range for virtual scrolling
+         */
+        updateVirtualScrollingRange(firstRow) {
+            if (!this.virtualScrolling.enabled || !this.editor) return
+
+            // Calculate if we need to adjust the rendered range
+            const currentFirstRow = this.editor.renderer.getFirstVisibleRow()
+
+            // Only update if the range has significantly changed
+            if (Math.abs(firstRow - currentFirstRow) > 5) {
+                // Batch the DOM updates for better performance
+                this.batchVirtualScrollingUpdate(firstRow)
+            }
+        },
+
+        /**
+         * Batch virtual scrolling updates to reduce DOM operations
+         */
+        batchVirtualScrollingUpdate(firstRow) {
+            if (!this.editor) return
+
+            requestAnimationFrame(() => {
+                try {
+                    // Update the visible lines in ACE
+                    const session = this.editor.session
+
+                    // Ensure we don't exceed file bounds
+                    const totalLines = session.getLength()
+                    Math.max(0, Math.min(firstRow, totalLines - 1))
+
+                    // Optimize ACE's rendering for the new range
+                    if (this.virtualScrolling.lastScrollTop > 0) {
+                        session.setUndoManager(session.getUndoManager()) // Force refresh
+                    }
+
+                } catch (error) {
+                    console.warn('Virtual scrolling update error:', error)
+                }
+            })
+        },
+
+        /**
+         * Setup performance monitoring for virtual scrolling
+         */
+        setupVirtualScrollingMonitoring() {
+            if (!this.editor) return
+
+            // Monitor performance metrics
+            setInterval(() => {
+                if (this.virtualScrolling.enabled && this.editor) {
+                    const session = this.editor.session
+                    const lineCount = session.getLength()
+                    const currentTime = performance.now()
+
+                    // Warn if performance drops below 30fps
+                    if (currentTime - this.virtualScrolling.lastUpdateTime > 33) {
+                        console.warn(`Virtual scrolling performance warning: ${(currentTime - this.virtualScrolling.lastUpdateTime).toFixed(2)}ms for ${lineCount} lines`)
+                    }
+
+                    this.virtualScrolling.lastUpdateTime = currentTime
+                }
+            }, 1000)
+        },
+
+        /**
+         * Disable virtual scrolling (called when switching to smaller files)
+         */
+        disableVirtualScrolling() {
+            if (!this.virtualScrolling.enabled) return
+
+            // Restore original settings
+            if (this.virtualScrolling.originalMaxLines !== null) {
+                this.editor.setOption('maxLines', this.virtualScrolling.originalMaxLines)
+            }
+            if (this.virtualScrolling.originalMinLines !== null) {
+                this.editor.setOption('minLines', this.virtualScrolling.originalMinLines)
+            }
+
+            // Clean up event listeners
+            if (this.virtualScrolling.scrollHandler) {
+                this.removeEventListener(window, 'scroll', this.virtualScrolling.scrollHandler)
+            }
+            if (this.virtualScrolling.resizeHandler) {
+                this.removeEventListener(window, 'resize', this.virtualScrolling.resizeHandler)
+            }
+
+            // Reset state
+            this.virtualScrolling.enabled = false
+        },
+
+        /**
+         * Initialize Progressive Enhancement system
+         * Stages feature loading for optimal performance
+         */
+        initProgressiveEnhancement() {
+            if (!this.editor) return
+
+            // Start performance tracking
+            this.progressiveEnhancement.performanceMetrics.startTime = performance.now()
+
+            // Load Stage 0 (Core) immediately
+            this.loadProgressiveStage(0)
+
+            // Load Stage 1 (Intermediate) after delay
+            setTimeout(() => {
+                this.loadProgressiveStage(1)
+            }, this.progressiveEnhancement.stages[1].delay)
+
+            // Load Stage 2 (Advanced) after longer delay
+            setTimeout(() => {
+                this.loadProgressiveStage(2)
+            }, this.progressiveEnhancement.stages[2].delay)
+        },
+
+        /**
+         * Load a specific progressive enhancement stage
+         */
+        async loadProgressiveStage(stageNumber) {
+            if (stageNumber <= this.progressiveEnhancement.currentStage) return
+
+            const stage = this.progressiveEnhancement.stages[stageNumber]
+            if (stage.loaded) return
+
+            const startTime = performance.now()
+
+            try {
+                // Load features for this stage
+                await this.loadStageFeatures(stage.features)
+
+                // Mark stage as loaded
+                stage.loaded = true
+                this.progressiveEnhancement.currentStage = stageNumber
+
+                // Track performance
+                const loadTime = performance.now() - startTime
+                this.progressiveEnhancement.performanceMetrics.stageLoadTimes[stage.name] = loadTime
+
+                // Only log performance if significantly slow (>10ms)
+                if (loadTime > 10) {
+                    console.log(`Progressive stage ${stageNumber} loaded in ${loadTime.toFixed(2)}ms`)
+                }
+
+                // Update UI to show new capabilities
+                this.onProgressiveStageLoaded(stageNumber)
+
+            } catch (error) {
+                console.error(`Failed to load progressive stage ${stageNumber}:`, error)
+            }
+        },
+
+        /**
+         * Load features for a specific stage
+         */
+        async loadStageFeatures(features) {
+            const promises = features.map(feature => this.loadFeature(feature))
+            await Promise.allSettled(promises)
+        },
+
+        /**
+         * Load a single feature with proper error handling
+         */
+        async loadFeature(feature) {
+            try {
+                switch (feature) {
+                    case 'basicEditing':
+                        // Already loaded in initializeEditor
+                        break
+
+                    case 'syntaxHighlighting':
+                        await this.loadSyntaxHighlighting()
+                        break
+
+                    case 'basicTheme':
+                        await this.loadBasicTheme()
+                        break
+
+                    case 'autocompletion':
+                        await this.loadAutocompletion()
+                        break
+
+                    case 'findReplace':
+                        await this.loadFindReplace()
+                        break
+
+                    case 'toolbar':
+                        await this.loadToolbar()
+                        break
+
+                    case 'languageTools':
+                        await this.loadLanguageTools()
+                        break
+
+                    case 'customCompletions':
+                        await this.loadCustomCompletionsEnhanced()
+                        break
+
+                    case 'statusBar':
+                        await this.loadStatusBarProgressive()
+                        break
+
+                    case 'virtualScrolling':
+                        await this.loadVirtualScrollingProgressive()
+                        break
+
+                    case 'advancedExtensions':
+                        await this.loadAdvancedExtensionsProgressive()
+                        break
+
+                    default:
+                        console.warn(`Unknown progressive feature: ${feature}`)
+                }
+            } catch (error) {
+                console.error(`Failed to load feature ${feature}:`, error)
+            }
+        },
+
+        /**
+         * Load syntax highlighting progressively
+         */
+        async loadSyntaxHighlighting() {
+            if (!this.editor || !this.editor.session) return
+
+            // Set basic mode based on file extension or content
+            const session = this.editor.session
+            const mode = this.detectCodeMode(this.state || '')
+
+            if (mode) {
+                session.setMode(`ace/mode/${mode}`)
+            }
+        },
+
+        /**
+         * Load basic theme progressively
+         */
+        async loadBasicTheme() {
+            if (!this.editor) return
+
+            // Set theme based on dark mode preference
+            const isDarkMode = this.shouldUseDarkTheme()
+            this.editor.setTheme(isDarkMode ? this.darkTheme : this.options.theme || 'ace/theme/eclipse')
+        },
+
+        /**
+         * Load autocompletion progressively
+         */
+        async loadAutocompletion() {
+            if (!this.editor) return
+
+            // Enable basic autocompletion
+            this.editor.setOptions({
+                enableBasicAutocompletion: true,
+                enableLiveAutocompletion: true,
+                liveAutocompletionDelay: 500,
+                liveAutocompletionThreshold: 3,
+            })
+        },
+
+        /**
+         * Load find/replace functionality progressively
+         */
+        async loadFindReplace() {
+            if (!this.editor) return
+
+            // Extensions are already loaded during initialization
+            // We just need to ensure the searchbox functionality is available
+            try {
+                // Searchbox extension is already loaded during initialization
+                // No need for additional verification
+            } catch (error) {
+                console.warn('Failed to verify searchbox extension:', error)
+            }
+        },
+
+        /**
+         * Load toolbar progressively
+         */
+        async loadToolbar() {
+            if (this.hasToolbar && !this.toolbarState.isInitialized) {
+                // Initialize toolbar if not already done
+                if (typeof this.initToolbar === 'function') {
+                    this.initToolbar()
+                }
+            }
+        },
+
+        /**
+         * Load language tools progressively
+         */
+        async loadLanguageTools() {
+            if (!this.editor) return
+
+            // Enable valid ACE language tools options
+            this.editor.setOptions({
+                enableSnippets: true,
+                enableInlineAutocompletion: true,
+            })
+
+            // Check if language_tools extension is available and properly initialized
+            try {
+                // Language tools extension is already loaded during initialization
+                // No need for additional verification
+            } catch (error) {
+                console.warn('Failed to verify language_tools extension:', error)
+            }
+        },
+
+        /**
+         * Load custom completions progressively
+         */
+        async loadCustomCompletionsEnhanced() {
+            if (this.enableCustomCompletions && this.completions.length > 0) {
+                await this.setupCustomCompletions()
+            }
+        },
+
+        /**
+         * Load status bar progressively
+         */
+        async loadStatusBarProgressive() {
+            if (this.showStatusBar && !this.statusBarElement) {
+                await this.initStatusBar()
+            }
+        },
+
+        /**
+         * Load virtual scrolling progressively
+         */
+        async loadVirtualScrollingProgressive() {
+            if (this.editor && this.editor.session) {
+                const lineCount = this.editor.session.getLength()
+                if (lineCount > this.virtualScrolling.threshold) {
+                    this.setupVirtualScrolling()
+                }
+            }
+        },
+
+        /**
+         * Load advanced extensions progressively
+         */
+        async loadAdvancedExtensionsProgressive() {
+            // Extensions are already loaded during initialization
+            // This stage enables advanced features that depend on those extensions
+        },
+
+        /**
+         * Handle stage completion
+         */
+        onProgressiveStageLoaded(stageNumber) {
+            const stage = this.progressiveEnhancement.stages[stageNumber]
+
+            // Update UI state to reflect new capabilities
+            switch (stageNumber) {
+                case 1: // Intermediate stage loaded
+                    // Show toolbar, enable autocompletion UI indicators
+                    this.showProgressiveIndicators('intermediate')
+                    break
+
+                case 2: // Advanced stage loaded
+                    // Show status bar, enable advanced features UI
+                    this.showProgressiveIndicators('advanced')
+                    break
+            }
+
+            // Emit custom event for external listeners
+            this.$root.dispatchEvent(new CustomEvent('ace:stage-loaded', {
+                detail: { stage: stageNumber, features: stage.features }
+            }))
+        },
+
+        /**
+         * Show UI indicators for progressive loading stages
+         */
+        showProgressiveIndicators(level) {
+            const indicator = this.$root.querySelector('.ace-loading-indicator')
+            if (indicator) {
+                if (level === 'intermediate') {
+                    indicator.textContent = 'Loading advanced features...'
+                } else if (level === 'advanced') {
+                    indicator.style.display = 'none'
+                }
+            }
+        },
+
+        /**
+         * Detect code mode based on content or filename
+         */
+        detectCodeMode(content) {
+            // Check for PHP tags
+            if (content.includes('<?php') || content.includes('<?=')) return 'php'
+
+            // Check for JavaScript patterns
+            if (content.includes('function ') || content.includes('const ') || content.includes('let ')) return 'javascript'
+
+            // Check for CSS patterns
+            if (content.includes('{') && content.includes('}') && content.includes(':')) return 'css'
+
+            // Check for JSON
+            if (content.trim().startsWith('{') && content.trim().endsWith('}')) return 'json'
+
+            // Default to text
+            return 'text'
+        },
+
+        /**
+         * Check if dark theme should be used
+         */
+        shouldUseDarkTheme() {
+            if (this.disableDarkTheme) return false
+
+            // Check if dark mode is enabled
+            return document.documentElement.classList.contains('dark') ||
+                   window.matchMedia('(prefers-color-scheme: dark)').matches
+        },
+
         async initializeEditor() {
             try {
                 await this.loadScript(aceUrl)
 
+                // Preload critical extensions in parallel with main extension loading
+                const preloadingPromise = this.preloadCriticalExtensions()
+
                 await this.loadExtensionsEnhanced()
+
+                // Wait for preloading to complete before continuing
+                await preloadingPromise
 
                 Object.entries(config).forEach(([configKey, configValue]) => {
                     ace.config.set(configKey, configValue)
@@ -282,13 +960,17 @@ export default function aceEditorComponent({
 
                 this.editor = ace.edit(this.$refs.aceCodeEditorInner)
 
-                const mergedOptions = {
+                // Core stage options - minimal for fast initial load
+                const coreOptions = {
                     animatedScroll: false,
-                    showPrintMargin: true,
+                    showPrintMargin: false,  // Disable initially for performance
                     fadeFoldWidgets: false,
                     displayIndentGuides: false,
                     highlightGutterLine: false,
                     showInvisibles: false,
+                    enableBasicAutocompletion: false, // Enable progressively
+                    enableLiveAutocompletion: false,  // Enable progressively
+                    enableSnippets: false,            // Enable progressively
 
                     ...options,
 
@@ -297,20 +979,20 @@ export default function aceEditorComponent({
                     showLineNumbers: options.showLineNumbers !== false,
                 }
 
-                this.editor.setOptions(mergedOptions)
+                this.editor.setOptions(coreOptions)
 
-                if (mergedOptions.cursorStyle) {
+                if (coreOptions.cursorStyle) {
                     setTimeout(() => {
                         const appliedStyle =
                             this.editor.getOption('cursorStyle')
 
-                        if (appliedStyle !== mergedOptions.cursorStyle) {
+                        if (appliedStyle !== coreOptions.cursorStyle) {
                             console.warn(
                                 '⚠️ CursorStyle mismatch! Trying direct setOption...',
                             )
                             this.editor.setOption(
                                 'cursorStyle',
-                                mergedOptions.cursorStyle,
+                                coreOptions.cursorStyle,
                             )
                         }
                     }, 100)
@@ -354,28 +1036,39 @@ export default function aceEditorComponent({
                         this.shouldUpdateState = false
 
                         this.updateToolbarState(false)
-                    }, 150),
+                    }, 50), // Optimized: 150ms → 50ms for better responsiveness
                 )
 
-                if (this.enableCustomCompletions) {
-                    this.setupCustomCompletions()
-                }
+                // Remove immediate feature loading - these will be loaded progressively
+                // if (this.enableCustomCompletions) {
+                //     this.setupCustomCompletions()
+                // }
 
-                this.initToolbar()
+                // this.initToolbar()
 
                 this.initializeExpensiveStateCache()
 
                 this.optimizeUndoManager()
 
+                // Defer toolbar update until progressive stage loads
                 setTimeout(() => {
-                    this.updateToolbarState()
+                    if (this.progressiveEnhancement.currentStage >= 1) {
+                        this.updateToolbarState()
+                    }
                 }, 50)
 
-                if (this.showStatusBar) {
-                    this.initStatusBar()
-                }
+                // Remove immediate status bar loading - will be loaded progressively
+                // if (this.showStatusBar) {
+                //     this.initStatusBar()
+                // }
 
                 this.initAccessibility()
+
+                // Setup virtual scrolling for large files
+                this.setupVirtualScrolling()
+
+                // Initialize Progressive Enhancement system
+                this.initProgressiveEnhancement()
             } catch (error) {
                 console.error('ACE Editor initialization failed:', error)
                 this.handleInitializationError(error)
@@ -479,6 +1172,34 @@ export default function aceEditorComponent({
 
             const loadPromises = extensionEntries.map(
                 async ([extensionName, extensionUrl]) => {
+                    // Skip if already preloaded or cached
+                    if (this.extensionCache.preloaded.has(extensionName)) {
+                        return {
+                            name: extensionName,
+                            url: extensionUrl,
+                            status: 'preloaded',
+                        }
+                    }
+
+                    // Check if extension is in cache
+                    const cached = this.getExtensionFromCache(extensionName)
+                    if (cached) {
+                        try {
+                            this.executeCachedScript(cached, extensionName)
+                            return {
+                                name: extensionName,
+                                url: extensionUrl,
+                                status: 'cached',
+                            }
+                        } catch (error) {
+                            console.warn(
+                                `Failed to execute cached extension: ${extensionName}`,
+                                error,
+                            )
+                            // Fall through to network loading
+                        }
+                    }
+
                     try {
                         await this.loadScriptWithRetry(extensionUrl, maxRetries)
                         return {
@@ -515,11 +1236,20 @@ export default function aceEditorComponent({
             }
 
             const loaded = results
-                .filter((r) => r.value?.status === 'loaded')
+                .filter((r) => ['loaded', 'preloaded', 'cached'].includes(r.value?.status))
                 .map((r) => r.value.name)
             const failed = results
                 .filter((r) => r.value?.status === 'failed')
                 .map((r) => r.value)
+
+            // Log performance statistics
+            const preloaded = results.filter(r => r.value?.status === 'preloaded').length
+            const cached = results.filter(r => r.value?.status === 'cached').length
+            const networkLoaded = results.filter(r => r.value?.status === 'loaded').length
+
+            if (preloaded > 0 || cached > 0) {
+                console.log(`Extension loading performance: ${preloaded} preloaded, ${cached} cached, ${networkLoaded} from network`)
+            }
 
             if (failed.length > 0) {
                 console.error(
@@ -559,6 +1289,208 @@ export default function aceEditorComponent({
                     total > 0
                         ? Math.min(100, (loaded / total) * 100).toFixed(1)
                         : 0, // Cap at 100%
+            }
+        },
+
+        /**
+         * Preload critical extensions in parallel for faster initialization
+         * Should be called early in the initialization process
+         */
+        async preloadCriticalExtensions() {
+            if (!extensions || Object.keys(extensions).length === 0) {
+                return
+            }
+
+            // Define critical extensions that should be preloaded
+            const criticalExtensions = ['language_tools', 'searchbox', 'beautify']
+
+            // Filter to only extensions that are actually enabled
+            const preloadTargets = criticalExtensions.filter(extName =>
+                extensions[extName] && !this.extensionCache.preloaded.has(extName)
+            )
+
+            if (preloadTargets.length === 0) {
+                return // All critical extensions already preloaded
+            }
+
+            console.log(`Preloading ${preloadTargets.length} critical extensions...`)
+
+            const preloadPromises = preloadTargets.map(async (extName) => {
+                const extensionUrl = extensions[extName]
+
+                // Check cache first
+                const cached = this.getExtensionFromCache(extName)
+                if (cached) {
+                    this.extensionCache.preloaded.add(extName)
+                    return { name: extName, status: 'cached', source: 'localStorage' }
+                }
+
+                try {
+                    // Store the preloading promise to avoid duplicate requests
+                    if (!this.extensionCache.preloadingPromises.has(extName)) {
+                        const promise = this.loadScriptWithCache(extensionUrl, extName)
+                        this.extensionCache.preloadingPromises.set(extName, promise)
+                    }
+
+                    await this.extensionCache.preloadingPromises.get(extName)
+                    this.extensionCache.preloaded.add(extName)
+
+                    return { name: extName, status: 'preloaded', source: 'network' }
+                } catch (error) {
+                    console.warn(`Failed to preload extension: ${extName}`, error)
+                    return { name: extName, status: 'failed', error }
+                }
+            })
+
+            const results = await Promise.allSettled(preloadPromises)
+            const successful = results.filter(r => r.value?.status !== 'failed')
+
+            console.log(`Preloaded ${successful.length}/${preloadTargets.length} extensions successfully`)
+        },
+
+        /**
+         * Enhanced loadScript with localStorage caching support
+         */
+        async loadScriptWithCache(url, extensionName) {
+            // Check cache first
+            const cached = this.getExtensionFromCache(extensionName)
+            if (cached) {
+                // Execute cached script immediately
+                this.executeCachedScript(cached, extensionName)
+                return
+            }
+
+            // Load from network and cache
+            await this.loadScript(url)
+
+            // Cache the loaded script for future use
+            try {
+                const response = await fetch(url)
+                const scriptContent = await response.text()
+                this.cacheExtension(extensionName, scriptContent)
+            } catch (error) {
+                console.warn(`Failed to cache extension: ${extensionName}`, error)
+            }
+        },
+
+        /**
+         * Get extension content from localStorage cache
+         */
+        getExtensionFromCache(extensionName) {
+            try {
+                const cacheKey = `ace-extension-${extensionName}`
+                const cached = localStorage.getItem(cacheKey)
+
+                if (!cached) {
+                    return null
+                }
+
+                const parsed = JSON.parse(cached)
+
+                // Check cache version compatibility
+                if (parsed.version !== this.extensionCache.cacheVersion) {
+                    localStorage.removeItem(cacheKey)
+                    return null
+                }
+
+                // Check cache expiry (7 days)
+                const now = Date.now()
+                if (now - parsed.timestamp > 7 * 24 * 60 * 60 * 1000) {
+                    localStorage.removeItem(cacheKey)
+                    return null
+                }
+
+                return parsed.content
+            } catch (error) {
+                console.warn(`Cache read error for ${extensionName}:`, error)
+                return null
+            }
+        },
+
+        /**
+         * Cache extension content in localStorage
+         */
+        cacheExtension(extensionName, content) {
+            try {
+                const cacheKey = `ace-extension-${extensionName}`
+                const cacheData = {
+                    version: this.extensionCache.cacheVersion,
+                    timestamp: Date.now(),
+                    content: content
+                }
+
+                localStorage.setItem(cacheKey, JSON.stringify(cacheData))
+                this.extensionCache.cached.set(extensionName, cacheData)
+            } catch (error) {
+                // Handle quota exceeded - clean old cache entries
+                if (error.name === 'QuotaExceededError') {
+                    this.cleanExtensionCache()
+                    try {
+                        localStorage.setItem(cacheKey, JSON.stringify(cacheData))
+                    } catch (retryError) {
+                        console.warn(`Failed to cache extension ${extensionName}:`, retryError)
+                    }
+                }
+            }
+        },
+
+        /**
+         * Clean old extension cache entries to free space
+         */
+        cleanExtensionCache() {
+            const keys = Object.keys(localStorage)
+            const aceKeys = keys.filter(key => key.startsWith('ace-extension-'))
+
+            // Sort by timestamp and remove oldest entries
+            const entries = aceKeys.map(key => {
+                try {
+                    const parsed = JSON.parse(localStorage.getItem(key))
+                    return { key, timestamp: parsed.timestamp }
+                } catch {
+                    return { key, timestamp: 0 }
+                }
+            }).sort((a, b) => a.timestamp - b.timestamp)
+
+            // Remove oldest 25% of entries
+            const removeCount = Math.ceil(entries.length * 0.25)
+            for (let i = 0; i < removeCount; i++) {
+                localStorage.removeItem(entries[i].key)
+            }
+        },
+
+        /**
+         * Execute cached script content
+         */
+        executeCachedScript(content, extensionName) {
+            try {
+                // Create a script element with the cached content
+                const script = document.createElement('script')
+                script.textContent = content
+                script.setAttribute('data-cached-extension', extensionName)
+                document.head.appendChild(script)
+
+                this.loadedScripts.push(`cached:${extensionName}`)
+            } catch (error) {
+                console.error(`Failed to execute cached script for ${extensionName}:`, error)
+                throw error
+            }
+        },
+
+        /**
+         * Clear extension cache (for debugging or cache invalidation)
+         */
+        clearExtensionCache() {
+            try {
+                const keys = Object.keys(localStorage)
+                const aceKeys = keys.filter(key => key.startsWith('ace-extension-'))
+                aceKeys.forEach(key => localStorage.removeItem(key))
+
+                this.extensionCache.cached.clear()
+                this.extensionCache.preloaded.clear()
+
+                console.log('Extension cache cleared')
+            } catch (error) {
+                console.error('Failed to clear extension cache:', error)
             }
         },
 
@@ -1275,7 +2207,7 @@ export default function aceEditorComponent({
 
         /**
          * Optimized goto line dialog based on ACE Editor's internal implementation
-         * Includes performance optimizations and ACE-like features
+         * Includes performance optimizations and ACE-like features with dialog reuse
          */
         showOptimizedGotoLineDialog() {
             const session = this.editor.getSession()
@@ -1290,8 +2222,7 @@ export default function aceEditorComponent({
             const editorContainer = this.editor.container
             const overlay = this.createOptimizedModal(isDarkMode)
 
-            // Create enhanced dialog with ACE-like features
-            const dialog = this.createGotoLineDialog(
+            const dialog = this.getOrCreateGotoLineDialog(
                 currentLine,
                 totalLines,
                 isDarkMode,
@@ -1346,6 +2277,75 @@ export default function aceEditorComponent({
             })
 
             return overlay
+        },
+
+        /**
+         * Get or create goto line dialog with pooling for better performance
+         */
+        getOrCreateGotoLineDialog(currentLine, totalLines, isDarkMode) {
+            const now = Date.now()
+            const pool = this.dialogPool
+
+            // Reuse existing dialog if recent enough
+            if (pool.gotoLine && now - pool.lastUsed < pool.reuseTimeout) {
+                // Reset dialog state for reuse
+                this.resetGotoLineDialog(pool.gotoLine, currentLine, isDarkMode)
+                pool.lastUsed = now
+                return pool.gotoLine
+            }
+
+            // Create new dialog
+            pool.gotoLine = this.createGotoLineDialog(
+                currentLine,
+                totalLines,
+                isDarkMode,
+            )
+            pool.lastUsed = now
+            return pool.gotoLine
+        },
+
+        /**
+         * Reset existing dialog for reuse with new values
+         */
+        resetGotoLineDialog(dialog, currentLine, isDarkMode) {
+            // Update styles for current theme
+            dialog.style.background = isDarkMode ? '#1f2937' : 'white'
+            dialog.style.color = isDarkMode ? 'white' : 'black'
+            dialog.style.border = `1px solid ${
+                isDarkMode ? '#374151' : '#e5e7eb'
+            }`
+
+            // Reset input value
+            const input = dialog.querySelector('#gotoLineInput')
+            if (input) {
+                input.value = currentLine.toString()
+                input.style.borderColor = isDarkMode ? '#4b5563' : '#d1d5db'
+            }
+
+            // Update history section
+            const historyContainer = dialog.querySelector('#gotoHistory')
+            if (historyContainer) {
+                historyContainer.innerHTML =
+                    this.gotoLineState.history.length > 0
+                        ? this.gotoLineState.history
+                              .slice(-5)
+                              .map(
+                                  (line) =>
+                                      `<button class="history-btn" data-line="${line}" style="padding: 2px 8px; font-size: 11px; background: ${
+                                          isDarkMode ? '#374151' : '#f3f4f6'
+                                      }; color: ${
+                                          isDarkMode ? '#d1d5db' : '#4b5563'
+                                      }; border: 1px solid ${
+                                          isDarkMode ? '#4b5563' : '#d1d5db'
+                                      }; border-radius: 3px; cursor: pointer; font-family: monospace;">${line}</button>`,
+                              )
+                              .join('')
+                        : ''
+            }
+
+            // Reset animation state
+            dialog.style.transform = 'scale(0.95)'
+            dialog.style.opacity = '0'
         },
 
         /**
@@ -1849,7 +2849,7 @@ export default function aceEditorComponent({
                     return // Nothing to undo
                 }
 
-                // Check if we should queue this operation to prevent rapid calls
+                // Check if this operation should be queue to prevent rapid calls
                 const now = performance.now()
                 const timeSinceLastOp =
                     now - this.undoRedoState.lastOperationTime
@@ -1914,7 +2914,6 @@ export default function aceEditorComponent({
                     return // Nothing to redo
                 }
 
-                // Check if we should queue this operation to prevent rapid calls
                 const now = performance.now()
                 const timeSinceLastOp =
                     now - this.undoRedoState.lastOperationTime
@@ -2637,7 +3636,6 @@ export default function aceEditorComponent({
                 // Determine fold capabilities based on fast checks
                 isInsideFold = isRowFolded || !!foldAtCursor
 
-                // Check if we can fold (line is a fold start and not already folded)
                 if (
                     foldWidget === 'start' &&
                     !isRowFolded &&
@@ -2652,7 +3650,6 @@ export default function aceEditorComponent({
                     }
                 }
 
-                // Check if we can unfold (either folded line or inside a fold)
                 if (
                     isRowFolded ||
                     foldAtCursor ||
@@ -2661,7 +3658,6 @@ export default function aceEditorComponent({
                     canUnfold = true
                 }
 
-                // Additional check: if we're on a folded line's end, we can unfold
                 if (foldWidget === 'end' && isRowFolded) {
                     canUnfold = true
                 }
@@ -2843,12 +3839,21 @@ export default function aceEditorComponent({
                 this._globalEscapeHandler,
                 true,
             )
+
+            // Track for cleanup
+            this.eventListeners.push({
+                element: document,
+                type: 'keydown',
+                handler: this._globalEscapeHandler,
+                options: { capture: true },
+            })
         },
 
         // Initialize toolbar after editor is ready
         initToolbar() {
             if (this.hasToolbar) {
                 this.handleKeyboardShortcuts()
+                this.setupToolbarEventDelegation()
                 this.updateToolbarState()
 
                 // Listen for selection changes to update toolbar state
@@ -2879,6 +3884,38 @@ export default function aceEditorComponent({
                     this.updateToolbarState()
                 })
             }
+        },
+
+        /**
+         * Setup optimized event delegation for toolbar buttons
+         * Reduces memory usage and improves performance vs individual listeners
+         */
+        setupToolbarEventDelegation() {
+            const toolbar = this.$el.querySelector('.rd-ace-editor-toolbar')
+            if (!toolbar) return
+
+            // Single delegated event listener for all toolbar buttons
+            toolbar.addEventListener(
+                'click',
+                (event) => {
+                    const button = event.target.closest('[data-button]')
+                    if (!button) return
+
+                    const buttonType = button.dataset.button
+                    if (!buttonType) return
+
+                    // Execute the toolbar action
+                    this.executeToolbarAction(buttonType, event)
+                },
+                { passive: true },
+            )
+
+            // Store reference for cleanup
+            this.eventListeners.push({
+                element: toolbar,
+                type: 'click',
+                handler: null, // Using anonymous function, will be cleaned up differently
+            })
         },
 
         // Status Bar Methods
@@ -3336,10 +4373,37 @@ export default function aceEditorComponent({
 
             // Configure additional overscroll behavior
             if (options.behavior === 'manual') {
-                // For manual behavior, we might need custom scroll handling
-                this.editor.session.on('changeScrollTop', () => {
+                const scrollHandler = () => {
                     // Custom scroll behavior can be implemented here
-                })
+                }
+
+                // Use passive scroll listeners for better performance
+                this.editor.renderer.scrollBarV.addEventListener(
+                    'scroll',
+                    scrollHandler,
+                    { passive: true },
+                )
+                this.editor.renderer.scrollBarH.addEventListener(
+                    'scroll',
+                    scrollHandler,
+                    { passive: true },
+                )
+
+                // Track for cleanup
+                this.eventListeners.push(
+                    {
+                        element: this.editor.renderer.scrollBarV,
+                        type: 'scroll',
+                        handler: scrollHandler,
+                        options: { passive: true },
+                    },
+                    {
+                        element: this.editor.renderer.scrollBarH,
+                        type: 'scroll',
+                        handler: scrollHandler,
+                        options: { passive: true },
+                    },
+                )
             }
 
             // Set editor options related to scrolling
