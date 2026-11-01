@@ -58,10 +58,9 @@
 
 .rd-ace-coffee-sticker-img {
     @apply object-cover w-full h-12 transition-transform duration-200 ease-in-out border rounded-lg shadow-lg opacity-90;
-    border-color: hsl(var(--border));
+    @apply border-gray-200 dark:border-gray-700;
 
     &:hover {
-        @apply scale-105 shadow-xl;
-        border-color: hsl(var(--primary));
+        @apply scale-105 shadow-xl border-primary-600;
     }
 }

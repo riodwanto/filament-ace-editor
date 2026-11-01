@@ -77,8 +77,8 @@ it('defines the theme values the filament 3 stylesheet uses', function () use ($
     preg_match_all('/var\((--[\w-]+)/', $css, $used);
     preg_match_all('/(--[\w-]+)\s*:/', $css, $defined);
 
-    // Tailwind gives these two a fallback, and the other four are also undefined on Filament 4
-    $known = ['--tw-leading', '--tracking-wide', '--border', '--foreground', '--primary', '--ring'];
+    // Tailwind gives these two a fallback
+    $known = ['--tw-leading', '--tracking-wide'];
 
     expect(array_values(array_diff(array_unique($used[1]), $defined[1], $known)))->toBe([]);
 });

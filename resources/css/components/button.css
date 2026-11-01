@@ -28,7 +28,7 @@
 
     /* Focus ring */
     &:focus-visible {
-        @apply focus:ring-2 focus:ring-offset-1 focus:ring-primary-600/20;
+        @apply ring-2 ring-primary-600 dark:ring-primary-400;
     }
 
     /* Icon styling */

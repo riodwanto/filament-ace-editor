@@ -18,8 +18,7 @@
 
     .rd-ace-editor-toolbar-controls {
         @apply flex-col items-stretch gap-2;
-        @apply pt-2 mt-2 border-t;
-        border-color: hsl(var(--border));
+        @apply pt-2 mt-2 border-t border-gray-200 dark:border-gray-700;
     }
 
     .rd-ace-editor-control {
@@ -33,13 +32,11 @@
 
 @media (prefers-contrast: high) {
     .rd-ace-editor {
-        @apply border-2 dark:border-white;
-        border-color: hsl(var(--foreground));
+        @apply border-2 border-gray-950 dark:border-white;
     }
 
     .rd-ace-editor-btn {
-        @apply border-2 dark:border-white;
-        border-color: hsl(var(--foreground));
+        @apply border-2 border-gray-950 dark:border-white;
     }
 }
 
