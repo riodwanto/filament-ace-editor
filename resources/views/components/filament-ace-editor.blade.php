@@ -164,5 +164,5 @@
             @endif
 
         </div>
-
+    </div>
 </x-dynamic-component>
