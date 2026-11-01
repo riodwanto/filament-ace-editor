@@ -2,6 +2,14 @@
 
 All notable changes to `filament-ace-editor` will be documented in this file.
 
+## [4.1.3] - 2026-11-01
+
+### Fixed
+
+- **External Value Updates:** Keep the editor in sync when the field value is set from the server, such as with `$set()`. The editor used to drop every second update, so it could show a different value from the one being saved
+- **Filament Version:** Require `filament/filament` `^4.0`, so Composer won't install this release on another Filament major. Earlier releases didn't declare it, which let Filament 4 projects end up on 3.0, whose global styles override the panel theme
+- **Installation Docs:** Replace the claim that the package detects your Filament version with an install command for each major
+
 ## [4.1.2] - 2026-11-01
 
 ### Changed
