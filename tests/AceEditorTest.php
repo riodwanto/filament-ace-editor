@@ -357,14 +357,14 @@ describe('Enhanced Font and Display Controls', function () {
     });
 
     it('can configure extension-specific settings', function () {
-        $field = AceEditor::make('code')->setExtensionConfig('language_tools', [
-            'enableBasicAutocompletion' => true,
-            'enableLiveAutocompletion' => true
+        $field = AceEditor::make('code')->container(fieldContainer())->setExtensionConfig('language_tools', [
+            'enableBasicAutocompletion' => false,
+            'enableLiveAutocompletion' => false
         ]);
 
-        $configs = callNonPublic($field, 'getExtensionConfigs');
-        expect($configs['language_tools']['enableBasicAutocompletion'])->toBeTrue();
-        expect($configs['language_tools']['enableLiveAutocompletion'])->toBeTrue();
+        $options = $field->getEditorOptions();
+        expect($options['enableBasicAutocompletion'])->toBeFalse();
+        expect($options['enableLiveAutocompletion'])->toBeFalse();
     });
 
     it('can add custom commands', function () {

@@ -392,7 +392,7 @@ class AceEditor extends Field
             $editorOptions['cursorStyle'] = $this->getCursorStyle();
         }
 
-        $editorOptions = array_merge($this->editorOptions, $editorOptions);
+        $editorOptions = array_merge($this->editorOptions, $this->getExtensionEditorOptions(), $editorOptions);
 
         return $editorOptions;
     }
@@ -912,9 +912,17 @@ class AceEditor extends Field
         return $this;
     }
 
-    private function getExtensionConfigs(): array
+    public function getExtensionConfigs(): array
     {
         return $this->extensionConfigs ?? [];
+    }
+
+    /**
+     * Ace reads extension settings as editor options, except beautify, which keeps its own
+     */
+    private function getExtensionEditorOptions(): array
+    {
+        return array_merge(...array_values(array_diff_key($this->getExtensionConfigs(), ['beautify' => true])));
     }
 
     // Command system methods

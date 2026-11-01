@@ -239,38 +239,25 @@ it('can enable all available extensions', function () {
 
 it('can configure extension-specific settings', function () {
     $field = AceEditor::make('code')
+        ->container(fieldContainer())
         ->enableExtension('language_tools')
         ->setExtensionConfig('language_tools', [
-            'enableBasicAutocompletion' => true,
-            'enableLiveAutocompletion' => true,
-            'enableSnippets' => true,
-            'autoCompleters' => ['text', 'php', 'javascript'],
-            'snippetText' => 'Use Tab to insert snippet'
+            'enableLiveAutocompletion' => false,
+            'liveAutocompletionDelay' => 200,
         ])
         ->setExtensionConfig('beautify', [
-            'html_beautify' => true,
-            'js_beautify' => true,
-            'css_beautify' => true,
-            'indent_size' => '4',
-            'indent_char' => 'space'
+            'lineBreaksAfterCommasInCurlyBlock' => false,
         ]);
 
-    $configs = callNonPublic($field, 'getExtensionConfigs');
-    expect($configs)->toHaveCount(2);
+    $options = $field->getEditorOptions();
 
-    $languageToolsConfig = $configs['language_tools'];
-    expect($languageToolsConfig['enableBasicAutocompletion'])->toBeTrue();
-    expect($languageToolsConfig['enableLiveAutocompletion'])->toBeTrue();
-    expect($languageToolsConfig['enableSnippets'])->toBeTrue();
-    expect($languageToolsConfig['autoCompleters'])->toBeArray();
-    expect($languageToolsConfig['snippetText'])->toBe('Use Tab to insert snippet');
+    // Config sets enableLiveAutocompletion to true, and the field setting has to win
+    expect($options['enableLiveAutocompletion'])->toBeFalse();
+    expect($options['liveAutocompletionDelay'])->toBe(200);
 
-    $beautifyConfig = $configs['beautify'];
-    expect($beautifyConfig['html_beautify'])->toBeTrue();
-    expect($beautifyConfig['js_beautify'])->toBeTrue();
-    expect($beautifyConfig['css_beautify'])->toBeTrue();
-    expect($beautifyConfig['indent_size'])->toBe('4');
-    expect($beautifyConfig['indent_char'])->toBe('space');
+    // Beautify reads its own options, and Ace would reject this one as an editor option
+    expect($options)->not->toHaveKey('lineBreaksAfterCommasInCurlyBlock');
+    expect($field->getExtensionConfigs()['beautify'])->toBe(['lineBreaksAfterCommasInCurlyBlock' => false]);
 });
 
 it('can combine all enhanced features', function () {

@@ -22,6 +22,7 @@ export default function aceEditorComponent({
     currentFontSize = '14px',
     currentWordWrap = 'off',
     overscrollOptions = {},
+    beautifyOptions = {},
     isDisabled = false,
 }) {
     return {
@@ -218,6 +219,7 @@ export default function aceEditorComponent({
         currentFontSize,
         currentWordWrap,
         overscrollOptions,
+        beautifyOptions,
         async init() {
             if (this.$root.closest('.fi-modal')) {
                 await new Promise((resolve) => setTimeout(resolve, 300))
@@ -888,6 +890,18 @@ export default function aceEditorComponent({
         async loadAdvancedExtensionsProgressive() {
             // Extensions are already loaded during initialization
             // This stage enables advanced features that depend on those extensions
+            this.applyBeautifyOptions()
+        },
+
+        /**
+         * Beautify keeps one set of options per page, so the last editor to load wins
+         */
+        applyBeautifyOptions() {
+            const beautify = ace.require('ace/ext/beautify')
+
+            if (beautify) {
+                Object.assign(beautify.formatOptions, this.beautifyOptions)
+            }
         },
 
         /**

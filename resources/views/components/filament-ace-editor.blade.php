@@ -53,6 +53,7 @@
                 currentFontSize: @js($getFontSize() ?? '14px'),
                 currentWordWrap: @js($wordWrap ?? 'off'),
                 overscrollOptions: @js($getOverscrollOptions()),
+                beautifyOptions: @js($getExtensionConfigs()['beautify'] ?? []),
                 isFullscreen: false,
                 isDisabled: @js($isDisabled),
             })" x-ref="aceCodeEditor" @class([
