@@ -2,6 +2,12 @@
 
 All notable changes to `filament-ace-editor` will be documented in this file.
 
+## [4.1.3] - Unreleased
+
+### Fixed
+
+- **External Value Updates:** Keep the editor in sync when the field value is set from the server, such as with `$set()`. The editor used to drop every second update, so it could show a different value from the one being saved
+
 ## [4.1.2] - 2026-11-01
 
 ### Changed
