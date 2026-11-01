@@ -954,9 +954,7 @@ class AceEditor extends Field
             'name' => $name,
             'action' => $config['action'] ?? null,
             'shortcut' => $config['shortcut'] ?? null,
-            'category' => $config['category'] ?? 'custom',
             'description' => $config['description'] ?? '',
-            'icon' => $config['icon'] ?? null
         ];
         return $this;
     }
@@ -969,7 +967,7 @@ class AceEditor extends Field
         return $this;
     }
 
-    private function getCommands(): array
+    public function getCommands(): array
     {
         return $this->commands ?? [];
     }

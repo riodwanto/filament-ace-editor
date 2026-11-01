@@ -44,6 +44,10 @@ it('ships the accessibility option classes', function () use ($fieldView, $built
     }
 });
 
+it('sends custom commands to the editor', function () use ($fieldView) {
+    expect(file_get_contents($fieldView))->toContain('customCommands: @js($getCommands())');
+});
+
 it('enables custom completions when only snippets are added', function () {
     $field = AceEditor::make('code')->addSnippets(['pgfn' => 'function $1() {}']);
 

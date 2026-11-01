@@ -25,6 +25,7 @@ export default function aceEditorComponent({
     beautifyOptions = {},
     showSnippetsInPopup = true,
     searchOptions = {},
+    customCommands = {},
     isDisabled = false,
 }) {
     return {
@@ -224,6 +225,7 @@ export default function aceEditorComponent({
         beautifyOptions,
         showSnippetsInPopup,
         searchOptions,
+        customCommands,
         async init() {
             if (this.$root.closest('.fi-modal')) {
                 await new Promise((resolve) => setTimeout(resolve, 300))
@@ -899,6 +901,7 @@ export default function aceEditorComponent({
             this.applyBeautifyOptions()
             this.applySnippetPopupOption()
             this.applySearchOptions()
+            this.registerCustomCommands()
         },
 
         /**
@@ -975,6 +978,67 @@ export default function aceEditorComponent({
             }
 
             editor.commands.on('afterExec', setUpSearchBox)
+        },
+
+        registerCustomCommands() {
+            Object.values(this.customCommands).forEach((command) => {
+                const exec = this.resolveCommandAction(command.action)
+
+                if (!exec) {
+                    console.warn(
+                        `Ace Editor: command "${command.name}" has an unknown action "${command.action}"`,
+                    )
+
+                    return
+                }
+
+                this.editor.commands.addCommand({
+                    name: command.name,
+                    description: command.description,
+                    bindKey: this.commandBindKey(command.shortcut),
+                    readOnly: command.action.startsWith('wire:'),
+                    exec,
+                })
+            })
+        },
+
+        /**
+         * An action is wire:method, editor.method or the name of an Ace command
+         */
+        resolveCommandAction(action) {
+            if (action?.startsWith('wire:')) {
+                const method = action.slice('wire:'.length)
+
+                return (_editor, args) =>
+                    args?.row === undefined
+                        ? this.$wire.call(method)
+                        : this.$wire.call(method, args.row)
+            }
+
+            if (action?.startsWith('editor.')) {
+                const method = action.slice('editor.'.length)
+
+                return typeof Alpine.raw(this.editor)[method] === 'function'
+                    ? (editor) => editor[method]()
+                    : null
+            }
+
+            // Held by reference, so a command can reuse the name of the one it replaces
+            const target =
+                this.editor.commands.byName[action] ??
+                ace
+                    .require('ace/ext/beautify')
+                    ?.commands.find((command) => command.name === action)
+
+            return target
+                ? (editor, args) => editor.commands.exec(target, editor, args)
+                : null
+        },
+
+        commandBindKey(shortcut) {
+            return typeof shortcut === 'string'
+                ? { win: shortcut, mac: shortcut.replace(/\bctrl\b/i, 'Command') }
+                : shortcut
         },
 
         /**

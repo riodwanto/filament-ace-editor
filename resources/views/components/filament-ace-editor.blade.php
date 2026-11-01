@@ -56,6 +56,7 @@
                 beautifyOptions: @js($getExtensionConfigs()['beautify'] ?? []),
                 showSnippetsInPopup: @js($shouldShowSnippetsInPopup()),
                 searchOptions: @js($getAdvancedSearchOptions()),
+                customCommands: @js($getCommands()),
                 isFullscreen: false,
                 isDisabled: @js($isDisabled),
             })" x-ref="aceCodeEditor" @class([

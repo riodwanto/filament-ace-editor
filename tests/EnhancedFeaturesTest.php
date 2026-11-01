@@ -212,68 +212,40 @@ it('evaluates a closure given to advancedSnippets', function () {
 it('can configure custom commands with shortcuts', function () {
     $field = AceEditor::make('code')
         ->addCommand('formatCode', [
-            'action' => 'editor.format',
-            'shortcut' => 'Ctrl+Shift+F',
+            'action' => 'beautify',
+            'shortcut' => 'Ctrl+Shift+B',
+            'description' => 'Format the code',
             'category' => 'formatting',
-            'description' => 'Format code using formatter',
             'icon' => 'format-icon'
         ])
-        ->addCommand('toggleComment', [
-            'action' => 'editor.toggleCommentLines',
-            'shortcut' => 'Ctrl+/',
-            'category' => 'editing',
-            'description' => 'Toggle line comments'
+        ->addCommand('save', [
+            'action' => 'wire:save',
+            'shortcut' => ['win' => 'Ctrl+S', 'mac' => 'Cmd+S'],
         ]);
 
-    $commands = callNonPublic($field, 'getCommands');
-    expect($commands)->toHaveCount(2);
+    // There's no command palette or custom toolbar button yet to show the category and icon
+    expect($field->getCommands()['formatCode'])->toBe([
+        'name' => 'formatCode',
+        'action' => 'beautify',
+        'shortcut' => 'Ctrl+Shift+B',
+        'description' => 'Format the code',
+    ]);
 
-    $formatCommand = $commands['formatCode'];
-    expect($formatCommand['action'])->toBe('editor.format');
-    expect($formatCommand['shortcut'])->toBe('Ctrl+Shift+F');
-    expect($formatCommand['category'])->toBe('formatting');
-    expect($formatCommand['description'])->toBe('Format code using formatter');
-    expect($formatCommand['icon'])->toBe('format-icon');
-
-    $toggleCommand = $commands['toggleComment'];
-    expect($toggleCommand['action'])->toBe('editor.toggleCommentLines');
-    expect($toggleCommand['shortcut'])->toBe('Ctrl+/');
-    expect($toggleCommand['category'])->toBe('editing');
-    expect($toggleCommand['description'])->toBe('Toggle line comments');
+    expect($field->getCommands()['save']['shortcut'])->toBe(['win' => 'Ctrl+S', 'mac' => 'Cmd+S']);
 });
 
 it('can register multiple commands at once', function () {
     $field = AceEditor::make('code')
         ->registerCommands([
-            'findNext' => [
-                'action' => 'editor.findNext',
-                'shortcut' => 'F3',
-                'category' => 'search',
-                'description' => 'Find next occurrence'
-            ],
-            'findPrevious' => [
-                'action' => 'editor.findPrevious',
-                'shortcut' => 'Shift+F3',
-                'category' => 'search',
-                'description' => 'Find previous occurrence'
-            ],
-            'gotoLine' => [
-                'action' => 'editor.gotoLine',
-                'shortcut' => 'Ctrl+G',
-                'category' => 'navigation',
-                'description' => 'Go to line number'
-            ]
+            'findNext' => ['action' => 'editor.findNext', 'shortcut' => 'F3'],
+            'findPrevious' => ['action' => 'editor.findPrevious', 'shortcut' => 'Shift+F3'],
+            'comment' => ['action' => 'togglecomment', 'shortcut' => 'Ctrl+Shift+7'],
         ]);
 
-    $commands = callNonPublic($field, 'getCommands');
-    expect($commands)->toHaveCount(3);
-    expect($commands)->toHaveKey('findNext');
-    expect($commands)->toHaveKey('findPrevious');
-    expect($commands)->toHaveKey('gotoLine');
+    $commands = $field->getCommands();
 
-    expect($commands['findNext']['shortcut'])->toBe('F3');
+    expect(array_keys($commands))->toBe(['findNext', 'findPrevious', 'comment']);
     expect($commands['findPrevious']['shortcut'])->toBe('Shift+F3');
-    expect($commands['gotoLine']['shortcut'])->toBe('Ctrl+G');
 });
 
 it('can enable all available extensions', function () {
@@ -355,10 +327,9 @@ it('can combine all enhanced features', function () {
 
         // Commands
         ->addCommand('saveAndFormat', [
-            'action' => 'editor.formatAndSave',
+            'action' => 'wire:save',
             'shortcut' => 'Ctrl+S',
-            'category' => 'file',
-            'description' => 'Format and save file'
+            'description' => 'Save the record'
         ]);
 
     // Test all configurations
