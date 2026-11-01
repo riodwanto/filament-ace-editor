@@ -90,12 +90,22 @@ All notable changes to `filament-ace-editor` will be documented in this file.
 - **Status Bar Tests:** Verify status bar functionality and configuration options
 - **Reflection-Based Testing:** Use PHP reflection to test private/protected methods for thorough validation
 
+#### Compatibility & Defaults
+
+- **Laravel 12:** Allow `illuminate/contracts` `^12.0`
+- **Autocompletion Timing:** Set the `liveAutocompletionDelay` and `liveAutocompletionThreshold` config defaults to `500` and `3`, the values the editor was already using. A published config that still sets them to `0` now takes effect, so the popup opens sooner
+
 ### Fixed
 
 - **Test Method Visibility:** Update tests to use reflection for accessing private/protected methods instead of assuming public visibility
 - **Language Enum Import:** Add missing `Language` enum import in test file
 - **Height Calculation Logic:** Implement intelligent height hierarchy that properly handles min/max constraints
 - **Mixed Unit Support:** Correctly compare and convert between different CSS units (px, rem, em)
+- **Editor Layout:** Close the wrapper `<div>` in the field view, which pulled every component after the editor into its column
+- **Toolbar Labels:** Hide button labels with the plugin's `rd-ace-sr-only` class, because Filament 4 has no `sr-only` class and the labels overlapped the toolbar controls
+- **Custom Snippets:** Register `addSnippets()` entries with Ace's snippet manager, with or without `addCompletions()`
+- **Autocompletion Options:** Apply options set on the field, such as `enableLiveAutocompletion(false)`, instead of overriding them during progressive loading
+- **Errors After Destroy:** Stop the progressive loading and cursor style timers from throwing after the editor is destroyed
 
 ## [4.0.1] - 2025-11-23
 
