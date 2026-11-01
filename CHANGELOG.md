@@ -2,7 +2,7 @@
 
 All notable changes to `filament-ace-editor` will be documented in this file.
 
-## [4.1.2] - Unreleased
+## [4.1.2] - 2026-11-01
 
 ### Changed
 
