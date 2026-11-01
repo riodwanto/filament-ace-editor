@@ -18,12 +18,20 @@ These methods have existed since 4.1.0, but had no effect until this release.
 ### Changed
 
 - **Animated Scrolling:** Follow the `animatedScroll` option, which defaults to `false`. The editor used to turn it on regardless, so scrolling is no longer animated by default. Use `editorOptions(['animatedScroll' => true])` to keep it
+- **Extension Cache:** Stop keeping extensions in `localStorage`, and remove the copies already there. Browsers cache these files themselves, and a stored copy could outlive an Ace upgrade
 
 ### Fixed
 
 - **Keyboard Exit:** Press Escape, then Tab or Shift+Tab, to leave the editor with the keyboard. Tab alone still indents
 - **Fullscreen Layering:** Show the fullscreen editor above the whole panel when a parent uses `position: sticky`, `transform` or `filter`, which let the topbar and sidebar cover it or pushed it off screen. Browsers without the Popover API keep the previous behavior
-- **Cached Extensions:** Run `language_tools`, `searchbox` and `beautify` on repeat visits. Their cached copies were marked as loaded without being run, so `beautify` was missing and `searchbox` loaded late
+- **Large Documents:** Open documents over 10,000 lines in the editor. They crashed the plugin's virtual scrolling, which left a basic text area 24,000px tall with an oversized warning icon. Ace only renders the visible lines by itself, so that code is gone
+- **Focus Rings:** Show a solid focus ring on the toolbar buttons, the toolbar selects and the fullscreen button. They used a 20% tint or a CSS variable that didn't exist
+- **Validation Errors:** Show the red ring on the editor after a failed submit. It only worked on the first render, because the editor is `wire:ignore`
+- **Field Isolation:** Keep `addCompletions()` and `addSnippets()` in the field that adds them. They used to reach every editor on the page
+- **Leftover Timer:** Stop starting a timer that kept running after the editor was destroyed
+- **Snippet Tooltips:** Show the description beside a snippet in the popup, which was hidden because the popup cut it off
+- **Max Height:** Apply `maxHeight()` when it's lower than the height, including the default `40rem`. It used to be ignored
+- **Extension Loading:** Load `language_tools`, `searchbox` and `beautify` on every visit. From the second visit on, they were read from `localStorage` and never run, so `beautify` was missing and `searchbox` loaded late
 
 ## [4.2.0] - 2026-11-01
 
