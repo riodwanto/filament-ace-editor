@@ -646,6 +646,8 @@ export default function aceEditorComponent({
          * Load a specific progressive enhancement stage
          */
         async loadProgressiveStage(stageNumber) {
+            // Stage timers keep running after destroy()
+            if (this.isDestroyed) return
             if (stageNumber <= this.progressiveEnhancement.currentStage) return
 
             const stage = this.progressiveEnhancement.stages[stageNumber]
@@ -771,18 +773,32 @@ export default function aceEditorComponent({
         },
 
         /**
+         * Stage defaults, with anything set on the field taking priority
+         */
+        withFieldOptions(defaults) {
+            return Object.fromEntries(
+                Object.entries(defaults).map(([key, value]) => [
+                    key,
+                    this.options[key] ?? value,
+                ]),
+            )
+        },
+
+        /**
          * Load autocompletion progressively
          */
         async loadAutocompletion() {
             if (!this.editor) return
 
             // Enable basic autocompletion
-            this.editor.setOptions({
-                enableBasicAutocompletion: true,
-                enableLiveAutocompletion: true,
-                liveAutocompletionDelay: 500,
-                liveAutocompletionThreshold: 3,
-            })
+            this.editor.setOptions(
+                this.withFieldOptions({
+                    enableBasicAutocompletion: true,
+                    enableLiveAutocompletion: true,
+                    liveAutocompletionDelay: 500,
+                    liveAutocompletionThreshold: 3,
+                }),
+            )
         },
 
         /**
@@ -820,10 +836,12 @@ export default function aceEditorComponent({
             if (!this.editor) return
 
             // Enable valid ACE language tools options
-            this.editor.setOptions({
-                enableSnippets: true,
-                enableInlineAutocompletion: true,
-            })
+            this.editor.setOptions(
+                this.withFieldOptions({
+                    enableSnippets: true,
+                    enableInlineAutocompletion: true,
+                }),
+            )
 
             // Check if language_tools extension is available and properly initialized
             try {
@@ -838,7 +856,7 @@ export default function aceEditorComponent({
          * Load custom completions progressively
          */
         async loadCustomCompletionsEnhanced() {
-            if (this.enableCustomCompletions && this.completions.length > 0) {
+            if (this.enableCustomCompletions) {
                 await this.setupCustomCompletions()
             }
         },
@@ -983,6 +1001,8 @@ export default function aceEditorComponent({
 
                 if (coreOptions.cursorStyle) {
                     setTimeout(() => {
+                        if (this.isDestroyed || !this.editor) return
+
                         const appliedStyle =
                             this.editor.getOption('cursorStyle')
 
@@ -1567,11 +1587,13 @@ export default function aceEditorComponent({
             if (!this.editor) return
 
             // Enable live autocompletion if not already enabled
-            this.editor.setOptions({
-                enableBasicAutocompletion: true,
-                enableLiveAutocompletion: true,
-                enableSnippets: true,
-            })
+            this.editor.setOptions(
+                this.withFieldOptions({
+                    enableBasicAutocompletion: true,
+                    enableLiveAutocompletion: true,
+                    enableSnippets: true,
+                }),
+            )
 
             // Setup custom completions provider
             const langTools = ace.require('ace/ext/language_tools')
@@ -1607,15 +1629,16 @@ export default function aceEditorComponent({
             }
 
             // Add custom snippets
-            if (this.snippets && this.snippets.length > 0) {
-                Object.keys(this.snippets).forEach((trigger) => {
-                    const snippetContent = this.snippets[trigger]
-                    langTools.addSnippet({
-                        name: trigger,
-                        trigger: trigger,
-                        content: snippetContent,
-                    })
-                })
+            const snippets = Object.entries(this.snippets || {}).map(
+                ([trigger, content]) => ({
+                    name: trigger,
+                    tabTrigger: trigger,
+                    content,
+                }),
+            )
+
+            if (snippets.length > 0) {
+                ace.require('ace/snippets').snippetManager.register(snippets)
             }
         },
 

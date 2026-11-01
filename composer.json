@@ -1,7 +1,6 @@
 {
     "name": "riodwanto/filament-ace-editor",
     "description": "An ACE editor field for Filament forms with syntax highlighting, themes, and autocompletion.",
-    "version": "4.1.0",
     "type": "filament-plugin",
     "keywords": [
         "filament",
@@ -42,10 +41,10 @@
     "require-dev": {
         "filament/filament": "^4.0",
         "nunomaduro/collision": "^8.0",
-        "orchestra/testbench": "^9.0",
-        "pestphp/pest": "^2.0",
-        "pestphp/pest-plugin-arch": "^2.0",
-        "pestphp/pest-plugin-laravel": "^2.0"
+        "orchestra/testbench": "^9.0|^10.0",
+        "pestphp/pest": "^2.0|^3.0",
+        "pestphp/pest-plugin-arch": "^2.0|^3.0",
+        "pestphp/pest-plugin-laravel": "^2.0|^3.0"
     },
     "autoload": {
         "psr-4": {

@@ -472,6 +472,7 @@ class AceEditor extends Field
     public function addSnippets(array $snippets): static
     {
         $this->snippets = array_merge($this->snippets, $snippets);
+        $this->enableCustomCompletions = true;
         return $this;
     }
 

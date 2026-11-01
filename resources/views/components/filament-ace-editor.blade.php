@@ -77,7 +77,7 @@
                             x-bind:aria-label="isFullscreen ? 'Exit fullscreen mode (Escape key)' : 'Toggle fullscreen mode (Ctrl+Shift+F or Ctrl+F11)'"
                             :disabled="isDisabled" aria-controls="rd-ace-editor-content-{{ $statePath }}"
                             class="rd-ace-focus-ring">
-                            <span class="sr-only">Toggle fullscreen</span>
+                            <span class="rd-ace-sr-only">Toggle fullscreen</span>
                         </button>
                     </div>
                 </div>
@@ -94,7 +94,7 @@
                             :class="`rd-ace-editor-btn rd-ace-btn-${button} rd-ace-variant-ghost rd-ace-size-sm ${getButtonActiveState(button) ? 'rd-ace-btn-active' : ''} rd-ace-focus-ring`"
                             :disabled="getButtonDisabled(button) || isDisabled" :aria-label="getButtonTitle(button)"
                             :data-button="button">
-                            <span class="sr-only" x-text="getButtonTitle(button)"></span>
+                            <span class="rd-ace-sr-only" x-text="getButtonTitle(button)"></span>
                         </button>
                     </template>
                 </div>
@@ -164,5 +164,5 @@
             @endif
 
         </div>
-
+    </div>
 </x-dynamic-component>
