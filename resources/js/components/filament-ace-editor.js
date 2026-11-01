@@ -23,6 +23,7 @@ export default function aceEditorComponent({
     currentWordWrap = 'off',
     overscrollOptions = {},
     beautifyOptions = {},
+    showSnippetsInPopup = true,
     isDisabled = false,
 }) {
     return {
@@ -220,6 +221,7 @@ export default function aceEditorComponent({
         currentWordWrap,
         overscrollOptions,
         beautifyOptions,
+        showSnippetsInPopup,
         async init() {
             if (this.$root.closest('.fi-modal')) {
                 await new Promise((resolve) => setTimeout(resolve, 300))
@@ -890,7 +892,10 @@ export default function aceEditorComponent({
         async loadAdvancedExtensionsProgressive() {
             // Extensions are already loaded during initialization
             // This stage enables advanced features that depend on those extensions
+            if (!this.editor) return
+
             this.applyBeautifyOptions()
+            this.applySnippetPopupOption()
         },
 
         /**
@@ -902,6 +907,19 @@ export default function aceEditorComponent({
             if (beautify) {
                 Object.assign(beautify.formatOptions, this.beautifyOptions)
             }
+        },
+
+        /**
+         * Tab still expands a snippet that isn't offered in the popup
+         */
+        applySnippetPopupOption() {
+            const editor = Alpine.raw(this.editor)
+
+            if (this.showSnippetsInPopup || !editor.completers) return
+
+            editor.completers = editor.completers.filter(
+                (completer) => completer.id !== 'snippetCompleter',
+            )
         },
 
         /**

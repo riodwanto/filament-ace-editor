@@ -54,6 +54,7 @@
                 currentWordWrap: @js($wordWrap ?? 'off'),
                 overscrollOptions: @js($getOverscrollOptions()),
                 beautifyOptions: @js($getExtensionConfigs()['beautify'] ?? []),
+                showSnippetsInPopup: @js($shouldShowSnippetsInPopup()),
                 isFullscreen: false,
                 isDisabled: @js($isDisabled),
             })" x-ref="aceCodeEditor" @class([

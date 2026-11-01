@@ -394,6 +394,12 @@ class AceEditor extends Field
 
         $editorOptions = array_merge($this->editorOptions, $this->getExtensionEditorOptions(), $editorOptions);
 
+        $snippetOptions = $this->getAdvancedSnippets();
+
+        if (isset($snippetOptions['enable'])) {
+            $editorOptions['enableSnippets'] = (bool) $snippetOptions['enable'];
+        }
+
         return $editorOptions;
     }
 
@@ -484,7 +490,7 @@ class AceEditor extends Field
 
     public function getSnippets(): array
     {
-        return $this->snippets;
+        return array_merge($this->getAdvancedSnippets()['customSnippets'] ?? [], $this->snippets);
     }
 
     public function isCustomCompletionsEnabled(): bool
@@ -1041,12 +1047,20 @@ class AceEditor extends Field
     public function advancedSnippets(array|Closure $snippets): static
     {
         $this->advancedSnippets = $snippets;
+        $this->enableCustomCompletions = true;
         return $this;
     }
 
-    private function getAdvancedSnippets(): array
+    public function getAdvancedSnippets(): array
     {
-        return $this->advancedSnippets ?? [];
+        return $this->evaluate($this->advancedSnippets) ?? [];
+    }
+
+    public function shouldShowSnippetsInPopup(): bool
+    {
+        $options = $this->getAdvancedSnippets();
+
+        return ($options['enable'] ?? true) && ($options['autoComplete'] ?? true);
     }
 
     // Enhanced getter methods for new properties

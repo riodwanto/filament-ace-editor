@@ -136,25 +136,38 @@ it('can configure code lens options', function () {
 
 it('can configure advanced snippets', function () {
     $field = AceEditor::make('code')
+        ->container(fieldContainer())
+        ->addSnippets(['own' => 'own ${1:value}'])
         ->advancedSnippets([
-            'enable' => true,
-            'autoComplete' => true,
-            'showOnTrigger' => true,
+            'autoComplete' => false,
             'customSnippets' => [
                 'php_class' => 'class ${1:name} {\n\t${2:// code}\n}',
-                'php_function' => 'function ${1:name}(${2:args}) {\n\t${3:// code}\n}',
                 'js_arrow' => 'const ${1:name} = (${2:args}) => ${3:// code}'
             ]
         ]);
 
-    $snippets = callNonPublic($field, 'getAdvancedSnippets');
-    expect($snippets['enable'])->toBeTrue();
-    expect($snippets['autoComplete'])->toBeTrue();
-    expect($snippets['showOnTrigger'])->toBeTrue();
-    expect($snippets['customSnippets'])->toHaveCount(3);
-    expect($snippets['customSnippets'])->toHaveKey('php_class');
-    expect($snippets['customSnippets'])->toHaveKey('php_function');
-    expect($snippets['customSnippets'])->toHaveKey('js_arrow');
+    expect($field->getSnippets())->toHaveKeys(['own', 'php_class', 'js_arrow']);
+    expect($field->isCustomCompletionsEnabled())->toBeTrue();
+    expect($field->shouldShowSnippetsInPopup())->toBeFalse();
+    expect($field->getEditorOptions()['enableSnippets'])->toBeTrue();
+});
+
+it('turns snippets off with advancedSnippets', function () {
+    $field = AceEditor::make('code')
+        ->container(fieldContainer())
+        ->advancedSnippets(['enable' => false]);
+
+    expect($field->getEditorOptions()['enableSnippets'])->toBeFalse();
+    expect($field->shouldShowSnippetsInPopup())->toBeFalse();
+});
+
+it('evaluates a closure given to advancedSnippets', function () {
+    $field = AceEditor::make('code')
+        ->container(fieldContainer())
+        ->advancedSnippets(fn (): array => ['customSnippets' => ['closure' => 'value']]);
+
+    expect($field->getSnippets())->toHaveKey('closure');
+    expect($field->shouldShowSnippetsInPopup())->toBeTrue();
 });
 
 it('can configure custom commands with shortcuts', function () {
