@@ -15,19 +15,26 @@ Ace Editor implementation for Filament Form.
 | Package Version | Filament Version | Status |
 |:---------------:|:----------------:|:--------:|
 | 4.1.x       | 4.x          | Latest ✨ |
+| 3.0.x           | 3.x              | Legacy |
 | 1.x             | 3.x              | Stable ✅ |
 
 Choose the package version that matches your Filament installation. We recommend using the latest compatible version for the best features and security updates.
 
 ## Installation
 
-You can install the package via composer:
+Install the version for your Filament major:
 
 ```bash
-composer require riodwanto/filament-ace-editor
+# Filament 4
+composer require riodwanto/filament-ace-editor:^4.1
+
+# Filament 3
+composer require riodwanto/filament-ace-editor:^1.1
 ```
 
-The package will automatically detect your Filament version and install the compatible release.
+Set the version explicitly. Releases before 4.1.3 don't declare a Filament version, so Composer can install one that doesn't match your panel.
+
+If a Filament 4 panel looks broken after installing, with white inputs and small headings, check for `^3.0` in your `composer.json`. That version is built for Filament 3 and its styles override the panel theme. Run the Filament 4 command above to replace it.
 
 ## Usage
 
