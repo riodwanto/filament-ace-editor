@@ -2,6 +2,16 @@
 
 All notable changes to `filament-ace-editor` will be documented in this file.
 
+## [4.3.1] - 2026-11-01
+
+### Fixed
+
+- **Vim in Fullscreen:** Let Escape leave Vim's insert mode, visual mode and search prompt while fullscreen. It used to exit fullscreen and leave Vim in insert mode
+
+### Changed
+
+- **Keybindings Docs:** Explain how to turn on Vim, Emacs, Sublime and VS Code keybindings
+
 ## [4.3.0] - 2026-11-01
 
 ### Added

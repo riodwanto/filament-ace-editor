@@ -3651,7 +3651,11 @@ export default function aceEditorComponent({
         addGlobalFullscreenEscapeHandler() {
             // Store bound handler for cleanup
             this._globalEscapeHandler = (e) => {
-                if (e.key === 'Escape' && this.isFullscreen) {
+                if (
+                    e.key === 'Escape' &&
+                    this.isFullscreen &&
+                    !this.vimNeedsEscape()
+                ) {
                     e.preventDefault()
                     e.stopPropagation()
                     this.toggleFullscreen()
@@ -3672,6 +3676,18 @@ export default function aceEditorComponent({
                 handler: this._globalEscapeHandler,
                 options: { capture: true },
             })
+        },
+
+        /**
+         * Vim uses Escape to leave insert mode, visual mode and its search prompt
+         */
+        vimNeedsEscape() {
+            const vimAdapter = Alpine.raw(this.editor)?.state?.cm
+            const vim = vimAdapter?.state.vim
+
+            return Boolean(
+                vim?.insertMode || vim?.visualMode || vimAdapter?.state.dialog,
+            )
         },
 
         // Initialize toolbar after editor is ready

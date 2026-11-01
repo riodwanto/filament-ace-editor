@@ -54,6 +54,12 @@ it('shows validation errors from outside the wire:ignore element', function () u
     expect(file_get_contents($builtCssV3))->toContain('.has-error>.rd-ace-editor');
 });
 
+it('leaves escape to vim while fullscreen', function () {
+    expect(file_get_contents(dirname(__DIR__) . '/resources/dist/filament-ace-editor.js'))
+        ->toContain('insertMode')
+        ->toContain('visualMode');
+});
+
 it('sends custom commands and code lenses to the editor', function () use ($fieldView) {
     expect(file_get_contents($fieldView))
         ->toContain('customCommands: @js($getCommands())')
