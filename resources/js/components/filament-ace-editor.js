@@ -2791,6 +2791,8 @@ export default function aceEditorComponent({
                 document.body.style.overflow = ''
             }
 
+            this.syncFullscreenTopLayer(container)
+
             // Trigger ACE resize after a short delay (performance optimized)
             setTimeout(() => {
                 if (this.editor && !this.isDestroyed) {
@@ -2801,6 +2803,42 @@ export default function aceEditorComponent({
                     }
                 }
             }, 100)
+        },
+
+        /**
+         * The top layer ignores every parent's stacking context, transform and overflow
+         */
+        syncFullscreenTopLayer(container) {
+            if (!container.showPopover) return
+
+            if (this.isFullscreen) {
+                container.setAttribute('popover', 'manual')
+                container.showPopover()
+            } else {
+                container.hidePopover()
+                container.removeAttribute('popover')
+            }
+
+            this.mountAutocompletePopup(
+                this.isFullscreen ? container : document.body,
+            )
+        },
+
+        /**
+         * Ace mounts the popup on body, where the top layer would cover it
+         */
+        mountAutocompletePopup(parent) {
+            const autocomplete = ace.require('ace/autocomplete')
+
+            if (!autocomplete || !this.editor) return
+
+            const completer = autocomplete.Autocomplete.for(this.editor)
+
+            completer.parentNode = parent
+
+            if (completer.popup) {
+                parent.appendChild(completer.popup.container)
+            }
         },
 
         /**

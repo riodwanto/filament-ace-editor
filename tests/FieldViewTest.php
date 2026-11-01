@@ -24,6 +24,18 @@ it('hides button labels with a class the plugin ships', function () use ($fieldV
     expect(file_get_contents($builtCss))->toContain('.rd-ace-sr-only');
 });
 
+it('keeps the fullscreen editor and its tooltips in the top layer', function () use ($fieldView, $builtCss, $builtCssV3) {
+    expect(file_get_contents(dirname(__DIR__) . '/resources/dist/filament-ace-editor.js'))
+        ->toContain('showPopover')
+        ->toContain('hidePopover');
+
+    expect(file_get_contents($fieldView))->toContain('appendTo: () => isFullscreen ? $root : document.body');
+
+    foreach ([$builtCss, $builtCssV3] as $stylesheet) {
+        expect(file_get_contents($stylesheet))->toMatch('/rd-ace-editor--fullscreen\{[^}]*margin:0/');
+    }
+});
+
 it('enables custom completions when only snippets are added', function () {
     $field = AceEditor::make('code')->addSnippets(['pgfn' => 'function $1() {}']);
 

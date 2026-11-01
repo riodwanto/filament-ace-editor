@@ -8,6 +8,10 @@
     z-index: 9999 !important;
     width: 100vw !important;
     height: 100vh !important;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    color: inherit;
     @apply flex flex-col overflow-hidden transition-all duration-200 ease-out scale-100 bg-white opacity-100 dark:bg-gray-900;
 
     .rd-ace-editor-content {

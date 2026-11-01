@@ -7,6 +7,7 @@ All notable changes to `filament-ace-editor` will be documented in this file.
 ### Fixed
 
 - **Keyboard Exit:** Press Escape, then Tab or Shift+Tab, to leave the editor with the keyboard. Tab alone still indents
+- **Fullscreen Layering:** Show the fullscreen editor above the whole panel when a parent uses `position: sticky`, `transform` or `filter`, which let the topbar and sidebar cover it or pushed it off screen. Browsers without the Popover API keep the previous behavior
 
 ## [4.2.0] - 2026-11-01
 
