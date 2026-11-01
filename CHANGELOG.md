@@ -2,14 +2,37 @@
 
 All notable changes to `filament-ace-editor` will be documented in this file.
 
+## [4.1.2] - Unreleased
+
+### Changed
+
+- **Autocompletion Timing:** Set the `liveAutocompletionDelay` and `liveAutocompletionThreshold` config defaults to `500` and `3`, the values the editor was already using. A published config that still sets them to `0` now takes effect, so the popup opens sooner
+- **Package Version:** Remove the `version` field from `composer.json`, so each release tag sets the version
+- **Laravel 12 Testing:** Run the test suite on Laravel 12 with `orchestra/testbench` `^10.0` and Pest `^3.0`
+
+### Fixed
+
+- **Editor Layout:** Close the wrapper `<div>` in the field view, which pulled every component after the editor into its column
+- **Toolbar Labels:** Hide button labels with the plugin's `rd-ace-sr-only` class, because Filament 4 has no `sr-only` class and the labels overlapped the toolbar controls
+- **Custom Snippets:** Register `addSnippets()` entries with Ace's snippet manager, with or without `addCompletions()`
+- **Autocompletion Options:** Apply options set on the field, such as `enableLiveAutocompletion(false)`, instead of overriding them during progressive loading
+- **Errors After Destroy:** Stop the progressive loading and cursor style timers from throwing after the editor is destroyed
+- **README Example:** Replace `softWrap()` and `customCompletions()`, which don't exist, with `softWrapMode()`, `addCompletions()` and `addSnippets()`, and update the form example to Filament 4
+- **4.1.0 Changelog:** Remove the entries for pre-built language completion sets, which never shipped. Ace's own keywords and snippets for each language are still available
+
+## [4.1.1] - 2025-12-01
+
+### Changed
+
+- **Laravel 12:** Allow `illuminate/contracts` `^12.0`
+
 ## [4.1.0] - 2025-11-27
 
 ### Added
 
 #### Enhanced Editor Capabilities
 
-- **Custom Completions & Snippets:** Add support for custom autocompletion definitions with language-specific completions for PHP, JavaScript, and Python
-- **Language-Specific Features:** Pre-built completion sets with common functions, methods, and code snippets for popular programming languages
+- **Custom Completions & Snippets:** Add support for custom autocompletion definitions and snippets
 - **Advanced Language Support:** Extended language enum with 50+ programming languages including TypeScript, Rust, Elixir, Kotlin, and more
 - **Flexible Mode Configuration:** Auto-detect editor mode from file extensions for seamless language switching
 - **Comprehensive Toolbar:** Configurable toolbar buttons with 15+ actions including undo/redo, find/replace, formatting, and code manipulation
@@ -90,22 +113,12 @@ All notable changes to `filament-ace-editor` will be documented in this file.
 - **Status Bar Tests:** Verify status bar functionality and configuration options
 - **Reflection-Based Testing:** Use PHP reflection to test private/protected methods for thorough validation
 
-#### Compatibility & Defaults
-
-- **Laravel 12:** Allow `illuminate/contracts` `^12.0`
-- **Autocompletion Timing:** Set the `liveAutocompletionDelay` and `liveAutocompletionThreshold` config defaults to `500` and `3`, the values the editor was already using. A published config that still sets them to `0` now takes effect, so the popup opens sooner
-
 ### Fixed
 
 - **Test Method Visibility:** Update tests to use reflection for accessing private/protected methods instead of assuming public visibility
 - **Language Enum Import:** Add missing `Language` enum import in test file
 - **Height Calculation Logic:** Implement intelligent height hierarchy that properly handles min/max constraints
 - **Mixed Unit Support:** Correctly compare and convert between different CSS units (px, rem, em)
-- **Editor Layout:** Close the wrapper `<div>` in the field view, which pulled every component after the editor into its column
-- **Toolbar Labels:** Hide button labels with the plugin's `rd-ace-sr-only` class, because Filament 4 has no `sr-only` class and the labels overlapped the toolbar controls
-- **Custom Snippets:** Register `addSnippets()` entries with Ace's snippet manager, with or without `addCompletions()`
-- **Autocompletion Options:** Apply options set on the field, such as `enableLiveAutocompletion(false)`, instead of overriding them during progressive loading
-- **Errors After Destroy:** Stop the progressive loading and cursor style timers from throwing after the editor is destroyed
 
 ## [4.0.1] - 2025-11-23
 
