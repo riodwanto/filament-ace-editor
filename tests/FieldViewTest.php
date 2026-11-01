@@ -116,7 +116,7 @@ it('loads the stylesheet for the installed filament version', function () {
 it('declares the filament versions it supports', function () {
     $composer = json_decode(file_get_contents(dirname(__DIR__) . '/composer.json'), true);
 
-    expect($composer['require']['filament/filament'])->toContain('^3.3')->toContain('^4.0');
+    expect($composer['require']['filament/filament'])->toContain('^3.3')->toContain('^4.0')->toContain('^5.0');
 });
 
 it('only calls existing methods in the readme', function () {
