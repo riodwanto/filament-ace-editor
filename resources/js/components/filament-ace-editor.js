@@ -1,3 +1,6 @@
+// Every editor on the page shares one load of each script
+const scriptLoads = new Map()
+
 export default function aceEditorComponent({
     state,
     statePath,
@@ -193,13 +196,6 @@ export default function aceEditorComponent({
             lastUsed: 0,
             reuseTimeout: 5000, // 5 seconds before creating new dialog
         },
-        // Extension preloading and caching
-        extensionCache: {
-            preloaded: new Set(),
-            cached: new Map(),
-            cacheVersion: '1.0', // For cache invalidation
-            preloadingPromises: new Map(),
-        },
         operationState: {
             currentOperation: null,
             operationQueue: [],
@@ -365,11 +361,6 @@ export default function aceEditorComponent({
                 }
                 this.operationState.operationQueue = []
                 this.operationState.isBatching = false
-
-                // Clean up extension cache references
-                this.extensionCache.preloaded.clear()
-                this.extensionCache.cached.clear()
-                this.extensionCache.preloadingPromises.clear()
             } catch (error) {
                 console.error('Error during ACE editor cleanup:', error)
             }
@@ -1187,13 +1178,9 @@ export default function aceEditorComponent({
             try {
                 await this.loadScript(aceUrl)
 
-                // Preload critical extensions in parallel with main extension loading
-                const preloadingPromise = this.preloadCriticalExtensions()
+                this.removeLegacyExtensionCache()
 
                 await this.loadExtensionsEnhanced()
-
-                // Wait for preloading to complete before continuing
-                await preloadingPromise
 
                 Object.entries(config).forEach(([configKey, configValue]) => {
                     ace.config.set(configKey, configValue)
@@ -1419,34 +1406,6 @@ export default function aceEditorComponent({
 
             const loadPromises = extensionEntries.map(
                 async ([extensionName, extensionUrl]) => {
-                    // Skip if already preloaded or cached
-                    if (this.extensionCache.preloaded.has(extensionName)) {
-                        return {
-                            name: extensionName,
-                            url: extensionUrl,
-                            status: 'preloaded',
-                        }
-                    }
-
-                    // Check if extension is in cache
-                    const cached = this.getExtensionFromCache(extensionName)
-                    if (cached) {
-                        try {
-                            this.executeCachedScript(cached, extensionName)
-                            return {
-                                name: extensionName,
-                                url: extensionUrl,
-                                status: 'cached',
-                            }
-                        } catch (error) {
-                            console.warn(
-                                `Failed to execute cached extension: ${extensionName}`,
-                                error,
-                            )
-                            // Fall through to network loading
-                        }
-                    }
-
                     try {
                         await this.loadScriptWithRetry(extensionUrl, maxRetries)
                         return {
@@ -1483,20 +1442,11 @@ export default function aceEditorComponent({
             }
 
             const loaded = results
-                .filter((r) => ['loaded', 'preloaded', 'cached'].includes(r.value?.status))
+                .filter((r) => r.value?.status === 'loaded')
                 .map((r) => r.value.name)
             const failed = results
                 .filter((r) => r.value?.status === 'failed')
                 .map((r) => r.value)
-
-            // Log performance statistics
-            const preloaded = results.filter(r => r.value?.status === 'preloaded').length
-            const cached = results.filter(r => r.value?.status === 'cached').length
-            const networkLoaded = results.filter(r => r.value?.status === 'loaded').length
-
-            if (preloaded > 0 || cached > 0) {
-                console.log(`Extension loading performance: ${preloaded} preloaded, ${cached} cached, ${networkLoaded} from network`)
-            }
 
             if (failed.length > 0) {
                 console.error(
@@ -1540,210 +1490,15 @@ export default function aceEditorComponent({
         },
 
         /**
-         * Preload critical extensions in parallel for faster initialization
-         * Should be called early in the initialization process
+         * Older releases kept extensions in localStorage, and ran them from there
          */
-        async preloadCriticalExtensions() {
-            if (!extensions || Object.keys(extensions).length === 0) {
-                return
-            }
-
-            // Define critical extensions that should be preloaded
-            const criticalExtensions = ['language_tools', 'searchbox', 'beautify']
-
-            // Filter to only extensions that are actually enabled
-            const preloadTargets = criticalExtensions.filter(extName =>
-                extensions[extName] && !this.extensionCache.preloaded.has(extName)
-            )
-
-            if (preloadTargets.length === 0) {
-                return // All critical extensions already preloaded
-            }
-
-            console.log(`Preloading ${preloadTargets.length} critical extensions...`)
-
-            const preloadPromises = preloadTargets.map(async (extName) => {
-                const extensionUrl = extensions[extName]
-
-                // Check cache first
-                const cached = this.getExtensionFromCache(extName)
-                if (cached) {
-                    this.executeCachedScript(cached, extName)
-                    this.extensionCache.preloaded.add(extName)
-                    return { name: extName, status: 'cached', source: 'localStorage' }
-                }
-
-                try {
-                    // Store the preloading promise to avoid duplicate requests
-                    if (!this.extensionCache.preloadingPromises.has(extName)) {
-                        const promise = this.loadScriptWithCache(extensionUrl, extName)
-                        this.extensionCache.preloadingPromises.set(extName, promise)
-                    }
-
-                    await this.extensionCache.preloadingPromises.get(extName)
-                    this.extensionCache.preloaded.add(extName)
-
-                    return { name: extName, status: 'preloaded', source: 'network' }
-                } catch (error) {
-                    console.warn(`Failed to preload extension: ${extName}`, error)
-                    return { name: extName, status: 'failed', error }
-                }
-            })
-
-            const results = await Promise.allSettled(preloadPromises)
-            const successful = results.filter(r => r.value?.status !== 'failed')
-
-            console.log(`Preloaded ${successful.length}/${preloadTargets.length} extensions successfully`)
-        },
-
-        /**
-         * Enhanced loadScript with localStorage caching support
-         */
-        async loadScriptWithCache(url, extensionName) {
-            // Check cache first
-            const cached = this.getExtensionFromCache(extensionName)
-            if (cached) {
-                // Execute cached script immediately
-                this.executeCachedScript(cached, extensionName)
-                return
-            }
-
-            // Load from network and cache
-            await this.loadScript(url)
-
-            // Cache the loaded script for future use
+        removeLegacyExtensionCache() {
             try {
-                const response = await fetch(url)
-                const scriptContent = await response.text()
-                this.cacheExtension(extensionName, scriptContent)
+                Object.keys(localStorage)
+                    .filter((key) => key.startsWith('ace-extension-'))
+                    .forEach((key) => localStorage.removeItem(key))
             } catch (error) {
-                console.warn(`Failed to cache extension: ${extensionName}`, error)
-            }
-        },
-
-        /**
-         * Get extension content from localStorage cache
-         */
-        getExtensionFromCache(extensionName) {
-            try {
-                const cacheKey = `ace-extension-${extensionName}`
-                const cached = localStorage.getItem(cacheKey)
-
-                if (!cached) {
-                    return null
-                }
-
-                const parsed = JSON.parse(cached)
-
-                // Check cache version compatibility
-                if (parsed.version !== this.extensionCache.cacheVersion) {
-                    localStorage.removeItem(cacheKey)
-                    return null
-                }
-
-                // Check cache expiry (7 days)
-                const now = Date.now()
-                if (now - parsed.timestamp > 7 * 24 * 60 * 60 * 1000) {
-                    localStorage.removeItem(cacheKey)
-                    return null
-                }
-
-                return parsed.content
-            } catch (error) {
-                console.warn(`Cache read error for ${extensionName}:`, error)
-                return null
-            }
-        },
-
-        /**
-         * Cache extension content in localStorage
-         */
-        cacheExtension(extensionName, content) {
-            try {
-                const cacheKey = `ace-extension-${extensionName}`
-                const cacheData = {
-                    version: this.extensionCache.cacheVersion,
-                    timestamp: Date.now(),
-                    content: content
-                }
-
-                localStorage.setItem(cacheKey, JSON.stringify(cacheData))
-                this.extensionCache.cached.set(extensionName, cacheData)
-            } catch (error) {
-                // Handle quota exceeded - clean old cache entries
-                if (error.name === 'QuotaExceededError') {
-                    this.cleanExtensionCache()
-                    try {
-                        localStorage.setItem(cacheKey, JSON.stringify(cacheData))
-                    } catch (retryError) {
-                        console.warn(`Failed to cache extension ${extensionName}:`, retryError)
-                    }
-                }
-            }
-        },
-
-        /**
-         * Clean old extension cache entries to free space
-         */
-        cleanExtensionCache() {
-            const keys = Object.keys(localStorage)
-            const aceKeys = keys.filter(key => key.startsWith('ace-extension-'))
-
-            // Sort by timestamp and remove oldest entries
-            const entries = aceKeys.map(key => {
-                try {
-                    const parsed = JSON.parse(localStorage.getItem(key))
-                    return { key, timestamp: parsed.timestamp }
-                } catch {
-                    return { key, timestamp: 0 }
-                }
-            }).sort((a, b) => a.timestamp - b.timestamp)
-
-            // Remove oldest 25% of entries
-            const removeCount = Math.ceil(entries.length * 0.25)
-            for (let i = 0; i < removeCount; i++) {
-                localStorage.removeItem(entries[i].key)
-            }
-        },
-
-        /**
-         * Execute cached script content
-         */
-        executeCachedScript(content, extensionName) {
-            // Every editor on the page preloads, but each extension only has to run once
-            if (document.querySelector(`script[data-cached-extension="${extensionName}"]`)) {
-                return
-            }
-
-            try {
-                // Create a script element with the cached content
-                const script = document.createElement('script')
-                script.textContent = content
-                script.setAttribute('data-cached-extension', extensionName)
-                document.head.appendChild(script)
-
-                this.loadedScripts.push(`cached:${extensionName}`)
-            } catch (error) {
-                console.error(`Failed to execute cached script for ${extensionName}:`, error)
-                throw error
-            }
-        },
-
-        /**
-         * Clear extension cache (for debugging or cache invalidation)
-         */
-        clearExtensionCache() {
-            try {
-                const keys = Object.keys(localStorage)
-                const aceKeys = keys.filter(key => key.startsWith('ace-extension-'))
-                aceKeys.forEach(key => localStorage.removeItem(key))
-
-                this.extensionCache.cached.clear()
-                this.extensionCache.preloaded.clear()
-
-                console.log('Extension cache cleared')
-            } catch (error) {
-                console.error('Failed to clear extension cache:', error)
+                // Without access to storage, there's nothing to remove
             }
         },
 
@@ -1751,23 +1506,26 @@ export default function aceEditorComponent({
          * Dynamically loads a JavaScript file from the given URL
          * Returns a Promise that resolves when the script loads successfully
          */
-        loadScript(url) {
-            return new Promise((resolve, reject) => {
-                // Check if script is already loaded
-                if (this.loadedScripts.includes(url)) {
-                    resolve()
-                    return
-                }
+        async loadScript(url) {
+            if (!scriptLoads.has(url)) {
+                scriptLoads.set(
+                    url,
+                    new Promise((resolve, reject) => {
+                        const script = document.createElement('script')
+                        script.src = url
+                        script.onload = resolve
+                        script.onerror = (error) => {
+                            scriptLoads.delete(url)
+                            reject(error)
+                        }
+                        document.head.appendChild(script)
+                    }),
+                )
+            }
 
-                const script = document.createElement('script')
-                script.src = url
-                script.onload = () => {
-                    this.loadedScripts.push(url)
-                    resolve()
-                }
-                script.onerror = reject
-                document.head.appendChild(script)
-            })
+            await scriptLoads.get(url)
+
+            this.loadedScripts.push(url)
         },
 
         /**
