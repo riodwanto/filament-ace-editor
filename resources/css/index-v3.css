@@ -1,0 +1,20 @@
+@reference 'tailwindcss';
+@reference '../../vendor/filament/filament/dist/theme.css';
+@reference '../../vendor/filament/support/resources/css/index.css';
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* No layers here: Filament 3's CSS is unlayered, so layered rules would lose to its global reset. */
+@import './filament-3-tokens.css';
+@import './base.css';
+@import './utilities.css';
+
+@import './components/editor.css';
+@import './components/button.css';
+@import './components/header.css';
+@import './components/toolbar.css';
+@import './components/status.css';
+@import './components/fullscreen.css';
+@import './components/responsive.css';
+
+@import './shared.css';

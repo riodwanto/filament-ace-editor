@@ -9,32 +9,41 @@ Ace Editor implementation for Filament Form.
 
 - PHP 8.2+
 - Laravel 11.28+
+- Filament 3.3+ or 4.x
 
 ## Version Compatibility
 
 | Package Version | Filament Version | Status |
 |:---------------:|:----------------:|:--------:|
-| 4.1.x       | 4.x          | Latest ✨ |
+| 4.2.x           | 3.3+ and 4.x     | Latest ✨ |
+| 4.0.x to 4.1.x  | 4.x              | Legacy |
 | 3.0.x           | 3.x              | Legacy |
-| 1.x             | 3.x              | Stable ✅ |
-
-Choose the package version that matches your Filament installation. We recommend using the latest compatible version for the best features and security updates.
+| 1.x             | 3.x              | Legacy |
 
 ## Installation
 
-Install the version for your Filament major:
-
 ```bash
-# Filament 4
-composer require riodwanto/filament-ace-editor:^4.1
-
-# Filament 3
-composer require riodwanto/filament-ace-editor:^1.1
+composer require riodwanto/filament-ace-editor
+php artisan filament:assets
 ```
 
-Set the version explicitly. Releases before 4.1.3 don't declare a Filament version, so Composer can install one that doesn't match your panel.
+The same release works on Filament 3.3+ and Filament 4, and loads the right stylesheet for your panel. On Filament 3 older than 3.3, use `composer require riodwanto/filament-ace-editor:^1.1`.
 
-If a Filament 4 panel looks broken after installing, with white inputs and small headings, check for `^3.0` in your `composer.json`. That version is built for Filament 3 and its styles override the panel theme. Run the Filament 4 command above to replace it.
+If a Filament 4 panel looks broken after installing, with white inputs and small headings, check for `^3.0` in your `composer.json`. That version is built for Filament 3 and its styles override the panel theme. The upgrade commands below replace it.
+
+## Upgrading from 1.x or 3.0
+
+```bash
+composer require riodwanto/filament-ace-editor:^4.2
+php artisan filament:assets
+```
+
+Version 4 changes how the field looks by default:
+
+- The default height goes from `16rem` to `40rem`. Use `->height('16rem')` to keep the old size.
+- The field now has a header and a toolbar. Use `->showHeader(false)` to hide the header and `->toolbarButtons([...])` to choose the buttons.
+
+If you published the views, publish them again with `php artisan vendor:publish --tag="filament-ace-editor-views" --force`.
 
 ## Usage
 
@@ -58,6 +67,21 @@ public static function form(Schema $schema): Schema
                 ->tabSize(4)
                 ->useSoftTabs(true)
                 ->addExtensions(['language_tools', 'beautify']),
+        ]);
+}
+```
+
+On Filament 3, the field goes in the same place, using Filament 3's form classes:
+
+```php
+use Filament\Forms\Form;
+use Riodwanto\FilamentAceEditor\AceEditor;
+
+public static function form(Form $form): Form
+{
+    return $form
+        ->schema([
+            AceEditor::make('code_editor')->mode('php'),
         ]);
 }
 ```

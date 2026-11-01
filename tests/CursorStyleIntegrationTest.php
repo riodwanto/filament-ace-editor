@@ -1,11 +1,10 @@
 <?php
 
-use Filament\Schemas\Schema;
 use Riodwanto\FilamentAceEditor\AceEditor;
 
 it('passes cursor style in editor options', function () {
     $field = AceEditor::make('code')
-        ->container(Schema::make())
+        ->container(fieldContainer())
         ->cursorStyle('smooth');
 
     $editorOptions = $field->getEditorOptions();
@@ -16,7 +15,7 @@ it('passes cursor style in editor options', function () {
 
 it('cursor style is passed through to frontend data', function () {
     $field = AceEditor::make('code')
-        ->container(Schema::make())
+        ->container(fieldContainer())
         ->cursorStyle('slim');
 
     // The cursor style should be included in the editor options that get passed to JavaScript
