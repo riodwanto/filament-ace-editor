@@ -3349,9 +3349,6 @@ export default function aceEditorComponent({
 
                 // Optimize renderer settings
                 if (this.editor.renderer) {
-                    // Enable ACE's optimized scrolling
-                    this.editor.renderer.setAnimatedScroll(true)
-
                     // Optimize font rendering
                     this.editor.renderer.$optimizeFontRendering = true
                 }
@@ -3376,9 +3373,6 @@ export default function aceEditorComponent({
 
                 // Setup performance monitoring
                 this.setupPerformanceMonitoring()
-
-                // Setup graceful degradation
-                this.setupGracefulDegradation()
             } catch (error) {
                 console.warn('Failed to setup reliability improvements:', error)
             }
@@ -3467,47 +3461,6 @@ export default function aceEditorComponent({
                     slowOperations = 0
                 }
             }, 30000) // Every 30 seconds
-        },
-
-        /**
-         * Setup graceful degradation for ACE features
-         */
-        setupGracefulDegradation() {
-            // Feature detection with fallbacks
-            const features = {
-                animatedScroll: () => {
-                    try {
-                        this.editor.setOption('animatedScroll', true)
-                        return this.editor.getOption('animatedScroll')
-                    } catch (error) {
-                        this.editor.setOption('animatedScroll', false)
-                        return false
-                    }
-                },
-
-                liveAutocompletion: () => {
-                    try {
-                        // Test if live autocompletion works
-                        this.editor.setOption('enableLiveAutocompletion', true)
-                        return this.editor.getOption('enableLiveAutocompletion')
-                    } catch (error) {
-                        this.editor.setOption('enableLiveAutocompletion', false)
-                        return false
-                    }
-                },
-            }
-
-            // Test and enable/disable features based on support
-            Object.entries(features).forEach(([featureName, testFeature]) => {
-                try {
-                    testFeature()
-                } catch (error) {
-                    console.warn(
-                        `Feature test failed for ${featureName}:`,
-                        error,
-                    )
-                }
-            })
         },
 
         /**
