@@ -44,6 +44,16 @@ it('ships the accessibility option classes', function () use ($fieldView, $built
     }
 });
 
+it('shows validation errors from outside the wire:ignore element', function () use ($fieldView, $builtCss, $builtCssV3) {
+    $source = file_get_contents($fieldView);
+
+    expect(substr_count($source, "'has-error' => \$errors->has(\$statePath)"))->toBe(1);
+    expect(strpos($source, "'has-error'"))->toBeLessThan(strpos($source, 'wire:ignore'));
+
+    expect(file_get_contents($builtCss))->toContain('.has-error>.rd-ace-editor');
+    expect(file_get_contents($builtCssV3))->toContain('.has-error>.rd-ace-editor');
+});
+
 it('sends custom commands and code lenses to the editor', function () use ($fieldView) {
     expect(file_get_contents($fieldView))
         ->toContain('customCommands: @js($getCommands())')

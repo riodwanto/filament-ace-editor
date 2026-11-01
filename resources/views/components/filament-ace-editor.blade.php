@@ -62,7 +62,6 @@
                 isDisabled: @js($isDisabled),
             })" x-ref="aceCodeEditor" @class([
                 'rd-ace-editor rd-ace-transition',
-                'has-error' => $errors->has($statePath),
                 'rd-ace-editor-disabled' => $isDisabled,
                 'rd-ace-high-contrast' => $isHighContrastEnabled(),
                 'rd-ace-reduced-motion' => $isReducedMotionEnabled(),
