@@ -58,20 +58,6 @@ export default function aceEditorComponent({
         intersectionObserver: null,
         isVisible: false,
         isInitialized: false,
-        // Virtual Scrolling for large files
-        virtualScrolling: {
-            enabled: false,
-            maxLines: 1000,      // Maximum lines to render
-            bufferSize: 50,      // Buffer lines above/below viewport
-            threshold: 10000,    // Enable virtual scrolling for files with more than this many lines
-            originalMaxLines: null,
-            originalMinLines: null,
-            scrollHandler: null,
-            resizeHandler: null,
-            lastScrollTop: 0,
-            viewportHeight: 0,
-            lineHeight: 0,
-        },
         // Progressive Enhancement for staged loading
         progressiveEnhancement: {
             currentStage: 0,     // 0: basic, 1: intermediate, 2: full
@@ -91,7 +77,7 @@ export default function aceEditorComponent({
                 },
                 2: { // Advanced features - loads after 300ms
                     name: 'advanced',
-                    features: ['languageTools', 'customCompletions', 'statusBar', 'virtualScrolling', 'advancedExtensions'],
+                    features: ['languageTools', 'customCompletions', 'statusBar', 'advancedExtensions'],
                     loaded: false,
                     priority: 3,
                     delay: 300,
@@ -287,11 +273,6 @@ export default function aceEditorComponent({
                     this.intersectionObserver = null
                 }
 
-                // Clean up virtual scrolling
-                if (this.virtualScrolling.enabled) {
-                    this.disableVirtualScrolling()
-                }
-
                 // Clean up progressive enhancement
                 if (this.progressiveEnhancement.loadingPromises.size > 0) {
                     this.progressiveEnhancement.loadingPromises.forEach(promise => {
@@ -457,169 +438,6 @@ export default function aceEditorComponent({
         },
 
         /**
-         * Setup Virtual Scrolling for large files
-         * Only enables for files with more lines than the threshold
-         */
-        setupVirtualScrolling() {
-            if (!this.editor || !this.editor.session) {
-                return
-            }
-
-            const session = this.editor.session
-            const lineCount = session.getLength()
-
-            // Only enable virtual scrolling for large files
-            if (lineCount <= this.virtualScrolling.threshold) {
-                return
-            }
-
-            this.virtualScrolling.enabled = true
-
-            // Store original settings
-            this.virtualScrolling.originalMaxLines = this.editor.getOption('maxLines')
-            this.virtualScrolling.originalMinLines = this.editor.getOption('minLines')
-
-            // Enable virtual scrolling performance optimizations
-            this.editor.setOptions({
-                maxLines: this.virtualScrolling.maxLines,
-                minLines: Math.min(this.virtualScrolling.maxLines, 20),
-                animatedScroll: false,
-                showPrintMargin: false, // Disable for performance
-                highlightGutterLine: false, // Disable for performance
-                displayIndentGuides: false, // Disable for performance
-            })
-
-            // Setup scroll handler for virtual scrolling
-            this.setupVirtualScrollHandlers()
-
-            // Add performance monitoring
-            this.setupVirtualScrollingMonitoring()
-        },
-
-        /**
-         * Setup event handlers for virtual scrolling
-         */
-        setupVirtualScrollHandlers() {
-            if (!this.editor) return
-
-            const editorElement = this.editor.renderer.scroller
-
-            // Calculate line height
-            this.virtualScrolling.lineHeight = this.editor.renderer.lineHeight
-            this.virtualScrolling.viewportHeight = editorElement.clientHeight
-
-            // Throttled scroll handler to update visible range
-            this.virtualScrolling.scrollHandler = this.throttle(() => {
-                const scrollTop = editorElement.scrollTop
-                const firstVisibleRow = Math.floor(scrollTop / this.virtualScrolling.lineHeight)
-
-                // Update ACE's visible range if significantly changed
-                this.updateVirtualScrollingRange(firstVisibleRow)
-            }, 16) // 60fps
-
-            // Resize handler to update viewport dimensions
-            this.virtualScrolling.resizeHandler = this.debounce(() => {
-                this.virtualScrolling.viewportHeight = editorElement.clientHeight
-                this.virtualScrolling.lineHeight = this.editor.renderer.lineHeight
-            }, 100)
-
-            // Add event listeners with proper cleanup
-            this.addEventListener(editorElement, 'scroll', this.virtualScrolling.scrollHandler, { passive: true })
-            this.addEventListener(window, 'resize', this.virtualScrolling.resizeHandler)
-        },
-
-        /**
-         * Update the visible range for virtual scrolling
-         */
-        updateVirtualScrollingRange(firstRow) {
-            if (!this.virtualScrolling.enabled || !this.editor) return
-
-            // Calculate if we need to adjust the rendered range
-            const currentFirstRow = this.editor.renderer.getFirstVisibleRow()
-
-            // Only update if the range has significantly changed
-            if (Math.abs(firstRow - currentFirstRow) > 5) {
-                // Batch the DOM updates for better performance
-                this.batchVirtualScrollingUpdate(firstRow)
-            }
-        },
-
-        /**
-         * Batch virtual scrolling updates to reduce DOM operations
-         */
-        batchVirtualScrollingUpdate(firstRow) {
-            if (!this.editor) return
-
-            requestAnimationFrame(() => {
-                try {
-                    // Update the visible lines in ACE
-                    const session = this.editor.session
-
-                    // Ensure we don't exceed file bounds
-                    const totalLines = session.getLength()
-                    Math.max(0, Math.min(firstRow, totalLines - 1))
-
-                    // Optimize ACE's rendering for the new range
-                    if (this.virtualScrolling.lastScrollTop > 0) {
-                        session.setUndoManager(session.getUndoManager()) // Force refresh
-                    }
-
-                } catch (error) {
-                    console.warn('Virtual scrolling update error:', error)
-                }
-            })
-        },
-
-        /**
-         * Setup performance monitoring for virtual scrolling
-         */
-        setupVirtualScrollingMonitoring() {
-            if (!this.editor) return
-
-            // Monitor performance metrics
-            setInterval(() => {
-                if (this.virtualScrolling.enabled && this.editor) {
-                    const session = this.editor.session
-                    const lineCount = session.getLength()
-                    const currentTime = performance.now()
-
-                    // Warn if performance drops below 30fps
-                    if (currentTime - this.virtualScrolling.lastUpdateTime > 33) {
-                        console.warn(`Virtual scrolling performance warning: ${(currentTime - this.virtualScrolling.lastUpdateTime).toFixed(2)}ms for ${lineCount} lines`)
-                    }
-
-                    this.virtualScrolling.lastUpdateTime = currentTime
-                }
-            }, 1000)
-        },
-
-        /**
-         * Disable virtual scrolling (called when switching to smaller files)
-         */
-        disableVirtualScrolling() {
-            if (!this.virtualScrolling.enabled) return
-
-            // Restore original settings
-            if (this.virtualScrolling.originalMaxLines !== null) {
-                this.editor.setOption('maxLines', this.virtualScrolling.originalMaxLines)
-            }
-            if (this.virtualScrolling.originalMinLines !== null) {
-                this.editor.setOption('minLines', this.virtualScrolling.originalMinLines)
-            }
-
-            // Clean up event listeners
-            if (this.virtualScrolling.scrollHandler) {
-                this.removeEventListener(window, 'scroll', this.virtualScrolling.scrollHandler)
-            }
-            if (this.virtualScrolling.resizeHandler) {
-                this.removeEventListener(window, 'resize', this.virtualScrolling.resizeHandler)
-            }
-
-            // Reset state
-            this.virtualScrolling.enabled = false
-        },
-
-        /**
          * Initialize Progressive Enhancement system
          * Stages feature loading for optimal performance
          */
@@ -729,10 +547,6 @@ export default function aceEditorComponent({
 
                     case 'statusBar':
                         await this.loadStatusBarProgressive()
-                        break
-
-                    case 'virtualScrolling':
-                        await this.loadVirtualScrollingProgressive()
                         break
 
                     case 'advancedExtensions':
@@ -868,18 +682,6 @@ export default function aceEditorComponent({
         async loadStatusBarProgressive() {
             if (this.showStatusBar && !this.statusBarElement) {
                 await this.initStatusBar()
-            }
-        },
-
-        /**
-         * Load virtual scrolling progressively
-         */
-        async loadVirtualScrollingProgressive() {
-            if (this.editor && this.editor.session) {
-                const lineCount = this.editor.session.getLength()
-                if (lineCount > this.virtualScrolling.threshold) {
-                    this.setupVirtualScrolling()
-                }
             }
         },
 
@@ -1298,9 +1100,6 @@ export default function aceEditorComponent({
 
                 this.initAccessibility()
 
-                // Setup virtual scrolling for large files
-                this.setupVirtualScrolling()
-
                 // Initialize Progressive Enhancement system
                 this.initProgressiveEnhancement()
             } catch (error) {
@@ -1326,7 +1125,7 @@ export default function aceEditorComponent({
                     <div class="fi-ace-editor-fallback">
                         <div class="fi-ace-editor-error-banner">
                             <div class="flex items-center gap-2 p-3 bg-yellow-50 border border-yellow-200 rounded-md">
-                                <svg class="w-5 h-5 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <svg class="w-5 h-5 text-yellow-600" width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 15.5c-.77.833.192 2.5 1.732 2.5z"></path>
                                 </svg>
                                 <div>
