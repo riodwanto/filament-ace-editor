@@ -245,12 +245,12 @@ class AceEditor extends Field
         return $this->url;
     }
 
-    protected function getMode(): ?string
+    public function getMode(): ?string
     {
         return $this->mode;
     }
 
-    protected function getTheme(): ?string
+    public function getTheme(): ?string
     {
         return $this->theme;
     }
@@ -365,7 +365,7 @@ class AceEditor extends Field
         return $enabledExtensions->toArray();
     }
 
-    protected function getBasePath(): string
+    public function getBasePath(): string
     {
         return $this->basePath;
     }
