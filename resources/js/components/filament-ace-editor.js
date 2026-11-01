@@ -1345,6 +1345,7 @@ export default function aceEditorComponent({
                 // Check cache first
                 const cached = this.getExtensionFromCache(extName)
                 if (cached) {
+                    this.executeCachedScript(cached, extName)
                     this.extensionCache.preloaded.add(extName)
                     return { name: extName, status: 'cached', source: 'localStorage' }
                 }
@@ -1486,6 +1487,11 @@ export default function aceEditorComponent({
          * Execute cached script content
          */
         executeCachedScript(content, extensionName) {
+            // Every editor on the page preloads, but each extension only has to run once
+            if (document.querySelector(`script[data-cached-extension="${extensionName}"]`)) {
+                return
+            }
+
             try {
                 // Create a script element with the cached content
                 const script = document.createElement('script')
