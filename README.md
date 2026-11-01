@@ -109,6 +109,13 @@ public static function form(Form $form): Form
 | useSoftTabs      | Use spaces instead of tabs for indentation                                                                     |
 | addCompletions   | Add your own suggestions to the autocompletion popup                                                           |
 | addSnippets      | Add your own snippets, as trigger and content pairs                                                            |
+| advancedSnippets | Add snippets and choose how they behave                                                                        |
+| addCommand       | Add a command with a keyboard shortcut                                                                         |
+| registerCommands | Add several commands at once                                                                                   |
+| codeLensOptions  | Show links above lines of code that run a command                                                              |
+| advancedSearch   | Set the starting search options, or turn search off                                                            |
+| accessibilityOptions | Turn on high contrast or reduced motion for the field                                                      |
+| setExtensionConfig | Pass settings to an extension                                                                                |
 
 All default values can be found in the [Configuration section](#config) below.
 
@@ -133,6 +140,103 @@ AceEditor::make('email_template')
 ```
 
 The `value` of a completion is inserted as written. Tab stops such as `${1:name}` only work in snippets, which expand when you type the trigger and press Tab.
+
+Use `advancedSnippets()` to add more snippets and choose how they behave:
+
+```php
+AceEditor::make('email_template')
+    ->advancedSnippets([
+        'autoComplete' => false,
+        'customSnippets' => ['ifpaid' => "{% if order.paid %}\n\t\$0\n{% endif %}"],
+    ]);
+```
+
+| Option           | Default | Effect                                                                 |
+| :--------------- | :------ | :--------------------------------------------------------------------- |
+| `customSnippets` | `[]`    | Snippets as trigger and content pairs, the same as `addSnippets()`      |
+| `autoComplete`   | `true`  | `false` leaves snippets out of the popup. Tab still expands them        |
+| `enable`         | `true`  | `false` turns snippets off, in the popup and on Tab                     |
+
+##### Custom commands
+
+`addCommand()` adds one command and `registerCommands()` adds several. A shortcut works while the editor has focus:
+
+```php
+AceEditor::make('code')
+    ->addCommand('save', [
+        'action' => 'wire:save',
+        'shortcut' => 'Ctrl+S',
+        'description' => 'Save the record',
+    ])
+    ->registerCommands([
+        'format' => ['action' => 'beautify', 'shortcut' => 'Ctrl+Shift+B'],
+        'nextMatch' => ['action' => 'editor.findNext', 'shortcut' => 'F3'],
+    ]);
+```
+
+| Action            | What it runs                                                                      |
+| :---------------- | :-------------------------------------------------------------------------------- |
+| `wire:save`       | The public `save` method of the Livewire component. It also runs in a read-only editor |
+| `editor.findNext` | The `findNext` method of the Ace editor                                            |
+| `togglecomment`   | The Ace command with that name, or `beautify` to format the code                   |
+
+`Ctrl` in a shortcut becomes `Command` on a Mac. To choose both yourself, use `['win' => 'Ctrl+S', 'mac' => 'Cmd+S']`. A shortcut replaces a built-in one that uses the same keys. A command with an unknown action is skipped, with a warning in the browser console.
+
+##### Code lens
+
+A code lens is a small link above a line of code. Clicking it runs a command:
+
+```php
+AceEditor::make('code')
+    ->addCommand('runFunction', ['action' => 'wire:runFunction'])
+    ->codeLensOptions([
+        'fontSize' => '12px',
+        'lenses' => [
+            ['match' => '/^function /', 'title' => 'Run', 'command' => 'runFunction'],
+            ['row' => 0, 'title' => 'Fold all', 'command' => 'foldall'],
+        ],
+    ]);
+```
+
+`match` adds the lens above every matching line and keeps up as the code changes. `row` fixes it above one line, counted from 0. `command` is a name from `addCommand()` or an Ace command. A `wire:` method receives the line number, as in `public function runFunction(int $row)`.
+
+Lenses only respond to the mouse, so give a command a shortcut when keyboard users need it too.
+
+##### Search options
+
+```php
+AceEditor::make('code')
+    ->advancedSearch(['caseSensitive' => true, 'wholeWord' => true, 'highlightAllMatches' => false]);
+```
+
+| Option                                  | Default | Effect                                                                                     |
+| :-------------------------------------- | :------ | :----------------------------------------------------------------------------------------- |
+| `caseSensitive`, `wholeWord`, `regex`   | `false` | The starting state of those buttons in the search box                                       |
+| `highlightAllMatches`                   | `true`  | `false` highlights only the current match                                                   |
+| `enable`                                | `true`  | `false` removes the find and replace commands and buttons, so Ctrl+F opens the browser's search |
+
+##### Accessibility options
+
+```php
+AceEditor::make('code')
+    ->accessibilityOptions(['highContrastMode' => true, 'reducedMotionMode' => true]);
+```
+
+`highContrastMode` gives the field and its controls stronger borders and focus outlines. `reducedMotionMode` removes transitions and animations from the field, including the smooth cursor. Both apply to everyone who uses the field. A visitor's own contrast and motion settings in their system still apply without them.
+
+##### Extension settings
+
+Ace reads most extension settings as editor options, and warns in the browser console about a name it doesn't know:
+
+```php
+AceEditor::make('code')
+    ->setExtensionConfig('language_tools', ['enableLiveAutocompletion' => false])
+    ->setExtensionConfig('beautify', ['lineBreaksAfterCommasInCurlyBlock' => false]);
+```
+
+Beautify keeps one set of options per page, so when several editors set them, the last one to load wins.
+
+These older option names are accepted but have no effect: `category` and `icon` in a command, `showOnLineNumber` and `showInScrollbar` in `codeLensOptions()`, and `showOnTrigger` in `advancedSnippets()`.
 
 ## Publishing
 
@@ -214,10 +318,8 @@ This package supports most of the powerful features from [Ace Editor](https://ac
 | Multiple cursors and selections  | ✅ Full  |
 | Autocompletion                   | ✅ Full  |
 | Snippets                         | ✅ Full  |
-| Custom key bindings              | ⚠️ Limited |
+| Custom key bindings              | ✅ Full  |
 | Command line interface           | ❌ Not supported |
-
-*Limited: Custom key bindings require additional configuration.*
 
 <a href="https://buymeacoffee.com/riodewanto" target="_blank"><img src="https://www.buymeacoffee.com/assets/img/custom_images/orange_img.png" alt="Buy Me A Coffee" style="height: 41px !important;width: 174px !important;box-shadow: 0px 3px 2px 0px rgba(190, 190, 190, 0.5) !important;-webkit-box-shadow: 0px 3px 2px 0px rgba(190, 190, 190, 0.5) !important;" ></a>
 
