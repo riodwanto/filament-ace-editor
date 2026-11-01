@@ -1,11 +1,6 @@
-.rd-ace-focus-ring {
-    @apply focus:outline-none focus:ring-2 focus:ring-offset-1;
-    --tw-ring-color: hsl(var(--ring));
-}
-
+.rd-ace-focus-ring,
 .rd-ace-focus-ring-primary {
-    @apply focus:outline-none focus:ring-2 focus:ring-offset-1;
-    --tw-ring-color: hsl(var(--primary));
+    @apply focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-600 dark:focus-visible:ring-primary-400;
 }
 
 .rd-ace-sr-only {

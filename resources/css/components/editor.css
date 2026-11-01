@@ -6,10 +6,6 @@
         @apply ring-2 ring-primary-600/20;
     }
 
-    &.has-error {
-        @apply border-danger-500 ring-2 ring-danger-500/20 dark:border-danger-400 dark:ring-danger-400/20;
-    }
-
     &.rd-ace-editor-disabled {
         @apply bg-gray-100 opacity-75 cursor-not-allowed dark:bg-gray-800;
 

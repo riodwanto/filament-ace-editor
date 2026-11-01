@@ -1,3 +1,6 @@
+// Every editor on the page shares one load of each script
+const scriptLoads = new Map()
+
 export default function aceEditorComponent({
     state,
     statePath,
@@ -55,20 +58,6 @@ export default function aceEditorComponent({
         intersectionObserver: null,
         isVisible: false,
         isInitialized: false,
-        // Virtual Scrolling for large files
-        virtualScrolling: {
-            enabled: false,
-            maxLines: 1000,      // Maximum lines to render
-            bufferSize: 50,      // Buffer lines above/below viewport
-            threshold: 10000,    // Enable virtual scrolling for files with more than this many lines
-            originalMaxLines: null,
-            originalMinLines: null,
-            scrollHandler: null,
-            resizeHandler: null,
-            lastScrollTop: 0,
-            viewportHeight: 0,
-            lineHeight: 0,
-        },
         // Progressive Enhancement for staged loading
         progressiveEnhancement: {
             currentStage: 0,     // 0: basic, 1: intermediate, 2: full
@@ -88,7 +77,7 @@ export default function aceEditorComponent({
                 },
                 2: { // Advanced features - loads after 300ms
                     name: 'advanced',
-                    features: ['languageTools', 'customCompletions', 'statusBar', 'virtualScrolling', 'advancedExtensions'],
+                    features: ['languageTools', 'customCompletions', 'statusBar', 'advancedExtensions'],
                     loaded: false,
                     priority: 3,
                     delay: 300,
@@ -193,13 +182,6 @@ export default function aceEditorComponent({
             lastUsed: 0,
             reuseTimeout: 5000, // 5 seconds before creating new dialog
         },
-        // Extension preloading and caching
-        extensionCache: {
-            preloaded: new Set(),
-            cached: new Map(),
-            cacheVersion: '1.0', // For cache invalidation
-            preloadingPromises: new Map(),
-        },
         operationState: {
             currentOperation: null,
             operationQueue: [],
@@ -291,11 +273,6 @@ export default function aceEditorComponent({
                     this.intersectionObserver = null
                 }
 
-                // Clean up virtual scrolling
-                if (this.virtualScrolling.enabled) {
-                    this.disableVirtualScrolling()
-                }
-
                 // Clean up progressive enhancement
                 if (this.progressiveEnhancement.loadingPromises.size > 0) {
                     this.progressiveEnhancement.loadingPromises.forEach(promise => {
@@ -365,11 +342,6 @@ export default function aceEditorComponent({
                 }
                 this.operationState.operationQueue = []
                 this.operationState.isBatching = false
-
-                // Clean up extension cache references
-                this.extensionCache.preloaded.clear()
-                this.extensionCache.cached.clear()
-                this.extensionCache.preloadingPromises.clear()
             } catch (error) {
                 console.error('Error during ACE editor cleanup:', error)
             }
@@ -463,169 +435,6 @@ export default function aceEditorComponent({
                 editorElement.style.opacity = '1'
                 editorElement.style.visibility = 'visible'
             }
-        },
-
-        /**
-         * Setup Virtual Scrolling for large files
-         * Only enables for files with more lines than the threshold
-         */
-        setupVirtualScrolling() {
-            if (!this.editor || !this.editor.session) {
-                return
-            }
-
-            const session = this.editor.session
-            const lineCount = session.getLength()
-
-            // Only enable virtual scrolling for large files
-            if (lineCount <= this.virtualScrolling.threshold) {
-                return
-            }
-
-            this.virtualScrolling.enabled = true
-
-            // Store original settings
-            this.virtualScrolling.originalMaxLines = this.editor.getOption('maxLines')
-            this.virtualScrolling.originalMinLines = this.editor.getOption('minLines')
-
-            // Enable virtual scrolling performance optimizations
-            this.editor.setOptions({
-                maxLines: this.virtualScrolling.maxLines,
-                minLines: Math.min(this.virtualScrolling.maxLines, 20),
-                animatedScroll: false,
-                showPrintMargin: false, // Disable for performance
-                highlightGutterLine: false, // Disable for performance
-                displayIndentGuides: false, // Disable for performance
-            })
-
-            // Setup scroll handler for virtual scrolling
-            this.setupVirtualScrollHandlers()
-
-            // Add performance monitoring
-            this.setupVirtualScrollingMonitoring()
-        },
-
-        /**
-         * Setup event handlers for virtual scrolling
-         */
-        setupVirtualScrollHandlers() {
-            if (!this.editor) return
-
-            const editorElement = this.editor.renderer.scroller
-
-            // Calculate line height
-            this.virtualScrolling.lineHeight = this.editor.renderer.lineHeight
-            this.virtualScrolling.viewportHeight = editorElement.clientHeight
-
-            // Throttled scroll handler to update visible range
-            this.virtualScrolling.scrollHandler = this.throttle(() => {
-                const scrollTop = editorElement.scrollTop
-                const firstVisibleRow = Math.floor(scrollTop / this.virtualScrolling.lineHeight)
-
-                // Update ACE's visible range if significantly changed
-                this.updateVirtualScrollingRange(firstVisibleRow)
-            }, 16) // 60fps
-
-            // Resize handler to update viewport dimensions
-            this.virtualScrolling.resizeHandler = this.debounce(() => {
-                this.virtualScrolling.viewportHeight = editorElement.clientHeight
-                this.virtualScrolling.lineHeight = this.editor.renderer.lineHeight
-            }, 100)
-
-            // Add event listeners with proper cleanup
-            this.addEventListener(editorElement, 'scroll', this.virtualScrolling.scrollHandler, { passive: true })
-            this.addEventListener(window, 'resize', this.virtualScrolling.resizeHandler)
-        },
-
-        /**
-         * Update the visible range for virtual scrolling
-         */
-        updateVirtualScrollingRange(firstRow) {
-            if (!this.virtualScrolling.enabled || !this.editor) return
-
-            // Calculate if we need to adjust the rendered range
-            const currentFirstRow = this.editor.renderer.getFirstVisibleRow()
-
-            // Only update if the range has significantly changed
-            if (Math.abs(firstRow - currentFirstRow) > 5) {
-                // Batch the DOM updates for better performance
-                this.batchVirtualScrollingUpdate(firstRow)
-            }
-        },
-
-        /**
-         * Batch virtual scrolling updates to reduce DOM operations
-         */
-        batchVirtualScrollingUpdate(firstRow) {
-            if (!this.editor) return
-
-            requestAnimationFrame(() => {
-                try {
-                    // Update the visible lines in ACE
-                    const session = this.editor.session
-
-                    // Ensure we don't exceed file bounds
-                    const totalLines = session.getLength()
-                    Math.max(0, Math.min(firstRow, totalLines - 1))
-
-                    // Optimize ACE's rendering for the new range
-                    if (this.virtualScrolling.lastScrollTop > 0) {
-                        session.setUndoManager(session.getUndoManager()) // Force refresh
-                    }
-
-                } catch (error) {
-                    console.warn('Virtual scrolling update error:', error)
-                }
-            })
-        },
-
-        /**
-         * Setup performance monitoring for virtual scrolling
-         */
-        setupVirtualScrollingMonitoring() {
-            if (!this.editor) return
-
-            // Monitor performance metrics
-            setInterval(() => {
-                if (this.virtualScrolling.enabled && this.editor) {
-                    const session = this.editor.session
-                    const lineCount = session.getLength()
-                    const currentTime = performance.now()
-
-                    // Warn if performance drops below 30fps
-                    if (currentTime - this.virtualScrolling.lastUpdateTime > 33) {
-                        console.warn(`Virtual scrolling performance warning: ${(currentTime - this.virtualScrolling.lastUpdateTime).toFixed(2)}ms for ${lineCount} lines`)
-                    }
-
-                    this.virtualScrolling.lastUpdateTime = currentTime
-                }
-            }, 1000)
-        },
-
-        /**
-         * Disable virtual scrolling (called when switching to smaller files)
-         */
-        disableVirtualScrolling() {
-            if (!this.virtualScrolling.enabled) return
-
-            // Restore original settings
-            if (this.virtualScrolling.originalMaxLines !== null) {
-                this.editor.setOption('maxLines', this.virtualScrolling.originalMaxLines)
-            }
-            if (this.virtualScrolling.originalMinLines !== null) {
-                this.editor.setOption('minLines', this.virtualScrolling.originalMinLines)
-            }
-
-            // Clean up event listeners
-            if (this.virtualScrolling.scrollHandler) {
-                this.removeEventListener(window, 'scroll', this.virtualScrolling.scrollHandler)
-            }
-            if (this.virtualScrolling.resizeHandler) {
-                this.removeEventListener(window, 'resize', this.virtualScrolling.resizeHandler)
-            }
-
-            // Reset state
-            this.virtualScrolling.enabled = false
         },
 
         /**
@@ -738,10 +547,6 @@ export default function aceEditorComponent({
 
                     case 'statusBar':
                         await this.loadStatusBarProgressive()
-                        break
-
-                    case 'virtualScrolling':
-                        await this.loadVirtualScrollingProgressive()
                         break
 
                     case 'advancedExtensions':
@@ -881,18 +686,6 @@ export default function aceEditorComponent({
         },
 
         /**
-         * Load virtual scrolling progressively
-         */
-        async loadVirtualScrollingProgressive() {
-            if (this.editor && this.editor.session) {
-                const lineCount = this.editor.session.getLength()
-                if (lineCount > this.virtualScrolling.threshold) {
-                    this.setupVirtualScrolling()
-                }
-            }
-        },
-
-        /**
          * Load advanced extensions progressively
          */
         async loadAdvancedExtensionsProgressive() {
@@ -902,6 +695,7 @@ export default function aceEditorComponent({
 
             this.applyBeautifyOptions()
             this.applySnippetPopupOption()
+            this.fixSnippetDocTooltips()
             this.applySearchOptions()
             this.registerCustomCommands()
             this.initCodeLens()
@@ -929,6 +723,24 @@ export default function aceEditorComponent({
             editor.completers = editor.completers.filter(
                 (completer) => completer.id !== 'snippetCompleter',
             )
+        },
+
+        /**
+         * Ace prints a bare tab stop such as $0 as "undefined" in a snippet's doc tooltip
+         */
+        fixSnippetDocTooltips() {
+            const snippetCompleter = ace.require('ace/ext/language_tools')?.snippetCompleter
+
+            if (!snippetCompleter || snippetCompleter.hasBareTabStopFix) return
+
+            const getDocTooltip = snippetCompleter.getDocTooltip
+
+            snippetCompleter.getDocTooltip = function (item) {
+                item.snippet = item.snippet?.replace(/(?<!\\)\$(\d+)/g, '${$1}')
+
+                return getDocTooltip.call(this, item)
+            }
+            snippetCompleter.hasBareTabStopFix = true
         },
 
         applySearchOptions() {
@@ -1187,13 +999,9 @@ export default function aceEditorComponent({
             try {
                 await this.loadScript(aceUrl)
 
-                // Preload critical extensions in parallel with main extension loading
-                const preloadingPromise = this.preloadCriticalExtensions()
+                this.removeLegacyExtensionCache()
 
                 await this.loadExtensionsEnhanced()
-
-                // Wait for preloading to complete before continuing
-                await preloadingPromise
 
                 Object.entries(config).forEach(([configKey, configValue]) => {
                     ace.config.set(configKey, configValue)
@@ -1311,9 +1119,6 @@ export default function aceEditorComponent({
 
                 this.initAccessibility()
 
-                // Setup virtual scrolling for large files
-                this.setupVirtualScrolling()
-
                 // Initialize Progressive Enhancement system
                 this.initProgressiveEnhancement()
             } catch (error) {
@@ -1339,7 +1144,7 @@ export default function aceEditorComponent({
                     <div class="fi-ace-editor-fallback">
                         <div class="fi-ace-editor-error-banner">
                             <div class="flex items-center gap-2 p-3 bg-yellow-50 border border-yellow-200 rounded-md">
-                                <svg class="w-5 h-5 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <svg class="w-5 h-5 text-yellow-600" width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 15.5c-.77.833.192 2.5 1.732 2.5z"></path>
                                 </svg>
                                 <div>
@@ -1419,34 +1224,6 @@ export default function aceEditorComponent({
 
             const loadPromises = extensionEntries.map(
                 async ([extensionName, extensionUrl]) => {
-                    // Skip if already preloaded or cached
-                    if (this.extensionCache.preloaded.has(extensionName)) {
-                        return {
-                            name: extensionName,
-                            url: extensionUrl,
-                            status: 'preloaded',
-                        }
-                    }
-
-                    // Check if extension is in cache
-                    const cached = this.getExtensionFromCache(extensionName)
-                    if (cached) {
-                        try {
-                            this.executeCachedScript(cached, extensionName)
-                            return {
-                                name: extensionName,
-                                url: extensionUrl,
-                                status: 'cached',
-                            }
-                        } catch (error) {
-                            console.warn(
-                                `Failed to execute cached extension: ${extensionName}`,
-                                error,
-                            )
-                            // Fall through to network loading
-                        }
-                    }
-
                     try {
                         await this.loadScriptWithRetry(extensionUrl, maxRetries)
                         return {
@@ -1483,20 +1260,11 @@ export default function aceEditorComponent({
             }
 
             const loaded = results
-                .filter((r) => ['loaded', 'preloaded', 'cached'].includes(r.value?.status))
+                .filter((r) => r.value?.status === 'loaded')
                 .map((r) => r.value.name)
             const failed = results
                 .filter((r) => r.value?.status === 'failed')
                 .map((r) => r.value)
-
-            // Log performance statistics
-            const preloaded = results.filter(r => r.value?.status === 'preloaded').length
-            const cached = results.filter(r => r.value?.status === 'cached').length
-            const networkLoaded = results.filter(r => r.value?.status === 'loaded').length
-
-            if (preloaded > 0 || cached > 0) {
-                console.log(`Extension loading performance: ${preloaded} preloaded, ${cached} cached, ${networkLoaded} from network`)
-            }
 
             if (failed.length > 0) {
                 console.error(
@@ -1540,210 +1308,15 @@ export default function aceEditorComponent({
         },
 
         /**
-         * Preload critical extensions in parallel for faster initialization
-         * Should be called early in the initialization process
+         * Older releases kept extensions in localStorage, and ran them from there
          */
-        async preloadCriticalExtensions() {
-            if (!extensions || Object.keys(extensions).length === 0) {
-                return
-            }
-
-            // Define critical extensions that should be preloaded
-            const criticalExtensions = ['language_tools', 'searchbox', 'beautify']
-
-            // Filter to only extensions that are actually enabled
-            const preloadTargets = criticalExtensions.filter(extName =>
-                extensions[extName] && !this.extensionCache.preloaded.has(extName)
-            )
-
-            if (preloadTargets.length === 0) {
-                return // All critical extensions already preloaded
-            }
-
-            console.log(`Preloading ${preloadTargets.length} critical extensions...`)
-
-            const preloadPromises = preloadTargets.map(async (extName) => {
-                const extensionUrl = extensions[extName]
-
-                // Check cache first
-                const cached = this.getExtensionFromCache(extName)
-                if (cached) {
-                    this.executeCachedScript(cached, extName)
-                    this.extensionCache.preloaded.add(extName)
-                    return { name: extName, status: 'cached', source: 'localStorage' }
-                }
-
-                try {
-                    // Store the preloading promise to avoid duplicate requests
-                    if (!this.extensionCache.preloadingPromises.has(extName)) {
-                        const promise = this.loadScriptWithCache(extensionUrl, extName)
-                        this.extensionCache.preloadingPromises.set(extName, promise)
-                    }
-
-                    await this.extensionCache.preloadingPromises.get(extName)
-                    this.extensionCache.preloaded.add(extName)
-
-                    return { name: extName, status: 'preloaded', source: 'network' }
-                } catch (error) {
-                    console.warn(`Failed to preload extension: ${extName}`, error)
-                    return { name: extName, status: 'failed', error }
-                }
-            })
-
-            const results = await Promise.allSettled(preloadPromises)
-            const successful = results.filter(r => r.value?.status !== 'failed')
-
-            console.log(`Preloaded ${successful.length}/${preloadTargets.length} extensions successfully`)
-        },
-
-        /**
-         * Enhanced loadScript with localStorage caching support
-         */
-        async loadScriptWithCache(url, extensionName) {
-            // Check cache first
-            const cached = this.getExtensionFromCache(extensionName)
-            if (cached) {
-                // Execute cached script immediately
-                this.executeCachedScript(cached, extensionName)
-                return
-            }
-
-            // Load from network and cache
-            await this.loadScript(url)
-
-            // Cache the loaded script for future use
+        removeLegacyExtensionCache() {
             try {
-                const response = await fetch(url)
-                const scriptContent = await response.text()
-                this.cacheExtension(extensionName, scriptContent)
+                Object.keys(localStorage)
+                    .filter((key) => key.startsWith('ace-extension-'))
+                    .forEach((key) => localStorage.removeItem(key))
             } catch (error) {
-                console.warn(`Failed to cache extension: ${extensionName}`, error)
-            }
-        },
-
-        /**
-         * Get extension content from localStorage cache
-         */
-        getExtensionFromCache(extensionName) {
-            try {
-                const cacheKey = `ace-extension-${extensionName}`
-                const cached = localStorage.getItem(cacheKey)
-
-                if (!cached) {
-                    return null
-                }
-
-                const parsed = JSON.parse(cached)
-
-                // Check cache version compatibility
-                if (parsed.version !== this.extensionCache.cacheVersion) {
-                    localStorage.removeItem(cacheKey)
-                    return null
-                }
-
-                // Check cache expiry (7 days)
-                const now = Date.now()
-                if (now - parsed.timestamp > 7 * 24 * 60 * 60 * 1000) {
-                    localStorage.removeItem(cacheKey)
-                    return null
-                }
-
-                return parsed.content
-            } catch (error) {
-                console.warn(`Cache read error for ${extensionName}:`, error)
-                return null
-            }
-        },
-
-        /**
-         * Cache extension content in localStorage
-         */
-        cacheExtension(extensionName, content) {
-            try {
-                const cacheKey = `ace-extension-${extensionName}`
-                const cacheData = {
-                    version: this.extensionCache.cacheVersion,
-                    timestamp: Date.now(),
-                    content: content
-                }
-
-                localStorage.setItem(cacheKey, JSON.stringify(cacheData))
-                this.extensionCache.cached.set(extensionName, cacheData)
-            } catch (error) {
-                // Handle quota exceeded - clean old cache entries
-                if (error.name === 'QuotaExceededError') {
-                    this.cleanExtensionCache()
-                    try {
-                        localStorage.setItem(cacheKey, JSON.stringify(cacheData))
-                    } catch (retryError) {
-                        console.warn(`Failed to cache extension ${extensionName}:`, retryError)
-                    }
-                }
-            }
-        },
-
-        /**
-         * Clean old extension cache entries to free space
-         */
-        cleanExtensionCache() {
-            const keys = Object.keys(localStorage)
-            const aceKeys = keys.filter(key => key.startsWith('ace-extension-'))
-
-            // Sort by timestamp and remove oldest entries
-            const entries = aceKeys.map(key => {
-                try {
-                    const parsed = JSON.parse(localStorage.getItem(key))
-                    return { key, timestamp: parsed.timestamp }
-                } catch {
-                    return { key, timestamp: 0 }
-                }
-            }).sort((a, b) => a.timestamp - b.timestamp)
-
-            // Remove oldest 25% of entries
-            const removeCount = Math.ceil(entries.length * 0.25)
-            for (let i = 0; i < removeCount; i++) {
-                localStorage.removeItem(entries[i].key)
-            }
-        },
-
-        /**
-         * Execute cached script content
-         */
-        executeCachedScript(content, extensionName) {
-            // Every editor on the page preloads, but each extension only has to run once
-            if (document.querySelector(`script[data-cached-extension="${extensionName}"]`)) {
-                return
-            }
-
-            try {
-                // Create a script element with the cached content
-                const script = document.createElement('script')
-                script.textContent = content
-                script.setAttribute('data-cached-extension', extensionName)
-                document.head.appendChild(script)
-
-                this.loadedScripts.push(`cached:${extensionName}`)
-            } catch (error) {
-                console.error(`Failed to execute cached script for ${extensionName}:`, error)
-                throw error
-            }
-        },
-
-        /**
-         * Clear extension cache (for debugging or cache invalidation)
-         */
-        clearExtensionCache() {
-            try {
-                const keys = Object.keys(localStorage)
-                const aceKeys = keys.filter(key => key.startsWith('ace-extension-'))
-                aceKeys.forEach(key => localStorage.removeItem(key))
-
-                this.extensionCache.cached.clear()
-                this.extensionCache.preloaded.clear()
-
-                console.log('Extension cache cleared')
-            } catch (error) {
-                console.error('Failed to clear extension cache:', error)
+                // Without access to storage, there's nothing to remove
             }
         },
 
@@ -1751,23 +1324,26 @@ export default function aceEditorComponent({
          * Dynamically loads a JavaScript file from the given URL
          * Returns a Promise that resolves when the script loads successfully
          */
-        loadScript(url) {
-            return new Promise((resolve, reject) => {
-                // Check if script is already loaded
-                if (this.loadedScripts.includes(url)) {
-                    resolve()
-                    return
-                }
+        async loadScript(url) {
+            if (!scriptLoads.has(url)) {
+                scriptLoads.set(
+                    url,
+                    new Promise((resolve, reject) => {
+                        const script = document.createElement('script')
+                        script.src = url
+                        script.onload = resolve
+                        script.onerror = (error) => {
+                            scriptLoads.delete(url)
+                            reject(error)
+                        }
+                        document.head.appendChild(script)
+                    }),
+                )
+            }
 
-                const script = document.createElement('script')
-                script.src = url
-                script.onload = () => {
-                    this.loadedScripts.push(url)
-                    resolve()
-                }
-                script.onerror = reject
-                document.head.appendChild(script)
-            })
+            await scriptLoads.get(url)
+
+            this.loadedScripts.push(url)
         },
 
         /**
@@ -1828,10 +1404,9 @@ export default function aceEditorComponent({
                 }),
             )
 
-            // Setup custom completions provider
-            const langTools = ace.require('ace/ext/language_tools')
+            const editor = Alpine.raw(this.editor)
 
-            // Add custom completions
+            // Add custom completions, for this editor only
             if (this.completions && this.completions.length > 0) {
                 const self = this
                 const customCompleter = {
@@ -1858,7 +1433,7 @@ export default function aceEditorComponent({
                     },
                 }
 
-                langTools.addCompleter(customCompleter)
+                editor.completers = [...(editor.completers ?? []), customCompleter]
             }
 
             // Add custom snippets
@@ -1871,8 +1446,35 @@ export default function aceEditorComponent({
             )
 
             if (snippets.length > 0) {
-                ace.require('ace/snippets').snippetManager.register(snippets)
+                this.registerEditorSnippets(editor, snippets)
             }
+        },
+
+        /**
+         * Ace only scopes snippets by language, so each editor gets a scope of its own
+         */
+        registerEditorSnippets(editor, snippets) {
+            const { snippetManager } = ace.require('ace/snippets')
+
+            if (!snippetManager.hasEditorScopes) {
+                const getActiveScopes = snippetManager.getActiveScopes
+
+                snippetManager.getActiveScopes = function (activeEditor) {
+                    return [
+                        ...getActiveScopes.call(this, activeEditor),
+                        activeEditor.rdAceSnippetScope,
+                    ].filter(Boolean)
+                }
+                snippetManager.hasEditorScopes = true
+            }
+
+            const scope = `rd-ace:${this.statePath}`
+
+            // A remounted editor keeps its state path, but its snippets can change
+            snippetManager.unregister([...(snippetManager.snippetMap[scope] ?? [])])
+            snippetManager.register(snippets, scope)
+
+            editor.rdAceSnippetScope = scope
         },
 
         // Toolbar Methods
@@ -3562,8 +3164,7 @@ export default function aceEditorComponent({
                 // Setup ACE-style error boundaries
                 this.setupErrorBoundaries()
 
-                // Setup performance monitoring
-                this.setupPerformanceMonitoring()
+                this.setupCommandErrorHandling()
             } catch (error) {
                 console.warn('Failed to setup reliability improvements:', error)
             }
@@ -3614,44 +3215,21 @@ export default function aceEditorComponent({
         },
 
         /**
-         * Setup performance monitoring with ACE-style metrics
+         * A failing command warns instead of breaking the editor
          */
-        setupPerformanceMonitoring() {
-            // Monitor editor operations
-            let operationCount = 0
-            let slowOperations = 0
-
+        setupCommandErrorHandling() {
             const originalExecCommand = this.editor.execCommand.bind(
                 this.editor,
             )
+
             this.editor.execCommand = (...args) => {
-                const startTime = performance.now()
-                operationCount++
-
                 try {
-                    const result = originalExecCommand(...args)
-                    const duration = performance.now() - startTime
-
-                    if (duration > 100) {
-                        // Operations slower than 100ms
-                        slowOperations++
-                    }
-
-                    return result
+                    return originalExecCommand(...args)
                 } catch (error) {
                     console.warn(`Command execution failed: ${args[0]}`, error)
                     return false
                 }
             }
-
-            // Periodically report performance stats
-            setInterval(() => {
-                if (operationCount > 0) {
-                    // Reset counters
-                    operationCount = 0
-                    slowOperations = 0
-                }
-            }, 30000) // Every 30 seconds
         },
 
         /**

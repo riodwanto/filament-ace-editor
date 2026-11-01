@@ -44,6 +44,16 @@ it('ships the accessibility option classes', function () use ($fieldView, $built
     }
 });
 
+it('shows validation errors from outside the wire:ignore element', function () use ($fieldView, $builtCss, $builtCssV3) {
+    $source = file_get_contents($fieldView);
+
+    expect(substr_count($source, "'has-error' => \$errors->has(\$statePath)"))->toBe(1);
+    expect(strpos($source, "'has-error'"))->toBeLessThan(strpos($source, 'wire:ignore'));
+
+    expect(file_get_contents($builtCss))->toContain('.has-error>.rd-ace-editor');
+    expect(file_get_contents($builtCssV3))->toContain('.has-error>.rd-ace-editor');
+});
+
 it('sends custom commands and code lenses to the editor', function () use ($fieldView) {
     expect(file_get_contents($fieldView))
         ->toContain('customCommands: @js($getCommands())')
@@ -77,8 +87,8 @@ it('defines the theme values the filament 3 stylesheet uses', function () use ($
     preg_match_all('/var\((--[\w-]+)/', $css, $used);
     preg_match_all('/(--[\w-]+)\s*:/', $css, $defined);
 
-    // Tailwind gives these two a fallback, and the other four are also undefined on Filament 4
-    $known = ['--tw-leading', '--tracking-wide', '--border', '--foreground', '--primary', '--ring'];
+    // Tailwind gives these two a fallback
+    $known = ['--tw-leading', '--tracking-wide'];
 
     expect(array_values(array_diff(array_unique($used[1]), $defined[1], $known)))->toBe([]);
 });

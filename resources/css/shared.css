@@ -6,13 +6,14 @@
         @apply ring-2 ring-primary-600;
     }
 
-    &.has-error {
-        @apply border-danger-500 ring-2 ring-danger-500/20 dark:border-danger-400 dark:ring-danger-400/20;
-    }
-
     &.rd-ace-editor-disabled {
         @apply bg-gray-100 opacity-75 cursor-not-allowed dark:bg-gray-800;
     }
+}
+
+/* The editor is wire:ignore, so only its parent can show a validation error */
+.has-error > .rd-ace-editor {
+    @apply ring-2 ring-danger-600 dark:ring-danger-400;
 }
 
 /* ACE Editor specific styles */
@@ -47,6 +48,11 @@
     color: #a1a1aa;
 }
 
+/* Ace places this tooltip with viewport coordinates, inside a popup that would clip it */
+.ace_tooltip.ace_doc-tooltip {
+    position: fixed;
+}
+
 /* Coffee sticker - Special feature styling */
 .rd-ace-coffee-sticker {
     @apply absolute z-10 no-underline bg-transparent bottom-11 right-5;
@@ -58,10 +64,9 @@
 
 .rd-ace-coffee-sticker-img {
     @apply object-cover w-full h-12 transition-transform duration-200 ease-in-out border rounded-lg shadow-lg opacity-90;
-    border-color: hsl(var(--border));
+    @apply border-gray-200 dark:border-gray-700;
 
     &:hover {
-        @apply scale-105 shadow-xl;
-        border-color: hsl(var(--primary));
+        @apply scale-105 shadow-xl border-primary-600;
     }
 }

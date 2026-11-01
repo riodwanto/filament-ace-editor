@@ -287,7 +287,6 @@ class AceEditor extends Field
         // Convert all heights to numbers for comparison
         $heightValue = $this->parseHeightValue($rawHeight);
         $minHeightValue = $this->parseHeightValue($minHeight);
-        $maxHeightValue = $this->parseHeightValue($maxHeight);
 
         // Format numbers back to CSS values
         $formatCssValue = fn($value) => is_numeric($value) ? "{$value}px" : $value;
@@ -298,7 +297,7 @@ class AceEditor extends Field
             'max-height' => null,
         ];
 
-        // Priority: explicit height > min height > max height
+        // Priority: explicit height > min height
         if ($isHeightExplicitlySet && $rawHeight !== null) {
             // Use min height if set height is too small
             if ($minHeight !== null && $heightValue < $minHeightValue) {
@@ -306,20 +305,12 @@ class AceEditor extends Field
             } else {
                 $result['height'] = $formatCssValue($rawHeight);
             }
+        } elseif ($minHeight !== null) {
+            $result['min-height'] = $formatCssValue($minHeight);
+        }
 
-            // Add max height if it fits
-            $appliedHeight = ($result['height'] !== null) ? $heightValue : $minHeightValue;
-            if ($maxHeight !== null && $appliedHeight < $maxHeightValue) {
-                $result['max-height'] = $formatCssValue($maxHeight);
-            }
-        } else {
-            // No explicit height, apply limits
-            if ($minHeight !== null) {
-                $result['min-height'] = $formatCssValue($minHeight);
-            }
-            if ($maxHeight !== null) {
-                $result['max-height'] = $formatCssValue($maxHeight);
-            }
+        if ($maxHeight !== null) {
+            $result['max-height'] = $formatCssValue($maxHeight);
         }
 
         return $result;

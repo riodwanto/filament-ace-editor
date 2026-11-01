@@ -24,7 +24,7 @@
     .rd-ace-editor-select {
         @apply h-8 px-3 py-0 text-xs font-medium text-center cursor-pointer w-fit min-w-fit;
         @apply transition-all duration-150 ease-in-out rounded hover:shadow-sm;
-        @apply focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-primary-600/20;
+        @apply focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-600 dark:focus-visible:ring-primary-400;
         @apply bg-white border border-gray-300 dark:bg-gray-900 dark:border-gray-600;
         @apply text-gray-900 dark:text-gray-100;
 
