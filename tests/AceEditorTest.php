@@ -629,7 +629,7 @@ describe('Height Hierarchy Logic', function () {
         expect($effectiveHeight['max-height'])->toBe('30rem'); // Applied because 15rem < 30rem
     });
 
-    it('does not apply max-height when applied height exceeds max-height', function () {
+    it('caps a larger height with max-height', function () {
         $field = AceEditor::make('code')
             ->height('35rem')
             ->minHeight('10rem')
@@ -639,10 +639,10 @@ describe('Height Hierarchy Logic', function () {
 
         expect($effectiveHeight['height'])->toBe('35rem');
         expect($effectiveHeight['min-height'])->toBeNull();
-        expect($effectiveHeight['max-height'])->toBeNull(); // Not applied because 35rem > 30rem
+        expect($effectiveHeight['max-height'])->toBe('30rem');
     });
 
-    it('keeps the default height over a lower max-height when no height is set', function () {
+    it('caps the default height with a lower max-height', function () {
         $field = AceEditor::make('code')
             ->minHeight('12rem')
             ->maxHeight('25rem');
@@ -651,7 +651,7 @@ describe('Height Hierarchy Logic', function () {
 
         expect($effectiveHeight['height'])->toBe('40rem'); // Default height is applied
         expect($effectiveHeight['min-height'])->toBeNull(); // No min-height when height is applied
-        expect($effectiveHeight['max-height'])->toBeNull(); // Not applied because 40rem > 25rem
+        expect($effectiveHeight['max-height'])->toBe('25rem');
     });
 
     it('handles only min-height when no height or max-height is set', function () {
@@ -673,7 +673,7 @@ describe('Height Hierarchy Logic', function () {
 
         expect($effectiveHeight['height'])->toBe('40rem'); // Default height is applied
         expect($effectiveHeight['min-height'])->toBeNull(); // No min-height when height is applied
-        expect($effectiveHeight['max-height'])->toBeNull(); // Not applied because 40rem > 20rem
+        expect($effectiveHeight['max-height'])->toBe('20rem');
     });
 
     it('handles height set equal to min-height', function () {
@@ -699,7 +699,7 @@ describe('Height Hierarchy Logic', function () {
 
         expect($effectiveHeight['height'])->toBe('25rem'); // Height takes priority
         expect($effectiveHeight['min-height'])->toBeNull();
-        expect($effectiveHeight['max-height'])->toBeNull(); // Not applied because height = max-height
+        expect($effectiveHeight['max-height'])->toBe('25rem');
     });
 
     it('handles pixel units correctly', function () {
