@@ -24,6 +24,7 @@ export default function aceEditorComponent({
     overscrollOptions = {},
     beautifyOptions = {},
     showSnippetsInPopup = true,
+    searchOptions = {},
     isDisabled = false,
 }) {
     return {
@@ -222,6 +223,7 @@ export default function aceEditorComponent({
         overscrollOptions,
         beautifyOptions,
         showSnippetsInPopup,
+        searchOptions,
         async init() {
             if (this.$root.closest('.fi-modal')) {
                 await new Promise((resolve) => setTimeout(resolve, 300))
@@ -896,6 +898,7 @@ export default function aceEditorComponent({
 
             this.applyBeautifyOptions()
             this.applySnippetPopupOption()
+            this.applySearchOptions()
         },
 
         /**
@@ -920,6 +923,58 @@ export default function aceEditorComponent({
             editor.completers = editor.completers.filter(
                 (completer) => completer.id !== 'snippetCompleter',
             )
+        },
+
+        applySearchOptions() {
+            if (Object.keys(this.searchOptions).length === 0) return
+
+            const editor = Alpine.raw(this.editor)
+            const {
+                enable = true,
+                caseSensitive = false,
+                wholeWord = false,
+                regex = false,
+                highlightAllMatches = true,
+            } = this.searchOptions
+
+            if (!enable) {
+                // Through the same Alpine proxy that added them, or Ace can't match the key bindings
+                this.editor.commands.removeCommands([
+                    'find',
+                    'findAll',
+                    'findnext',
+                    'findprevious',
+                    'findReplace',
+                    'replace',
+                    'selectOrFindNext',
+                    'selectOrFindPrevious',
+                ])
+
+                return
+            }
+
+            editor.$search.set({ caseSensitive, wholeWord, regExp: regex })
+
+            // Ace builds the search box the first time it opens
+            const setUpSearchBox = () => {
+                const searchBox = editor.searchBox
+
+                if (!searchBox) return
+
+                editor.commands.off('afterExec', setUpSearchBox)
+
+                searchBox.caseSensitiveOption.checked = caseSensitive
+                searchBox.wholeWordOption.checked = wholeWord
+                searchBox.regExpOption.checked = regex
+
+                if (!highlightAllMatches) {
+                    searchBox.highlight = () => {}
+                }
+
+                searchBox.$syncOptions(true)
+            }
+
+            editor.commands.on('afterExec', setUpSearchBox)
         },
 
         /**

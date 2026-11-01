@@ -125,20 +125,36 @@ it('keeps editor motion without reduced motion mode', function () {
 
 it('can configure advanced search options', function () {
     $field = AceEditor::make('code')
+        ->container(fieldContainer())
+        ->disableExtension('searchbox')
         ->advancedSearch([
-            'enable' => true,
-            'caseSensitive' => false,
-            'wholeWord' => false,
-            'regex' => false,
-            'highlightAllMatches' => true
+            'caseSensitive' => true,
+            'highlightAllMatches' => false
         ]);
 
-    $searchOptions = callNonPublic($field, 'getAdvancedSearchOptions');
-    expect($searchOptions['enable'])->toBeTrue();
-    expect($searchOptions['caseSensitive'])->toBeFalse();
-    expect($searchOptions['wholeWord'])->toBeFalse();
-    expect($searchOptions['regex'])->toBeFalse();
-    expect($searchOptions['highlightAllMatches'])->toBeTrue();
+    expect($field->getAdvancedSearchOptions()['caseSensitive'])->toBeTrue();
+    expect($field->isSearchEnabled())->toBeTrue();
+    expect($field->getEditorOptions()['highlightSelectedWord'])->toBeFalse();
+    expect($field->getEnabledExtensions())->toHaveKey('searchbox');
+    expect($field->getToolbarButtons())->toContain('replace');
+});
+
+it('removes the search buttons when advancedSearch turns search off', function () {
+    $field = AceEditor::make('code')
+        ->toolbarButtons(['undo', 'find', 'replace', 'redo'])
+        ->advancedSearch(fn (): array => ['enable' => false]);
+
+    expect($field->isSearchEnabled())->toBeFalse();
+    expect($field->getToolbarButtons())->toBe(['undo', 'redo']);
+    expect(AceEditor::make('code')->advancedSearch(['enable' => false])->getToolbarButtons())->not->toContain('replace');
+});
+
+it('leaves search alone without advancedSearch', function () {
+    $field = AceEditor::make('code')->container(fieldContainer())->disableExtension('searchbox');
+
+    expect($field->isSearchEnabled())->toBeTrue();
+    expect($field->getEnabledExtensions())->not->toHaveKey('searchbox');
+    expect($field->getEditorOptions())->not->toHaveKey('highlightSelectedWord');
 });
 
 it('can configure code lens options', function () {

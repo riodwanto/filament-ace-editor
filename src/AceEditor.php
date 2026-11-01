@@ -360,9 +360,17 @@ class AceEditor extends Field
     public function getEnabledExtensions(): array
     {
         $extensionsUrls = collect(config('filament-ace-editor.extensions'));
-        $enabledExtensionsKeys = $this->extensions->flip();
+        $enabledExtensionsKeys = $this->extensions->merge($this->getRequiredExtensions())->flip();
         $enabledExtensions = $extensionsUrls->intersectByKeys($enabledExtensionsKeys);
         return $enabledExtensions->toArray();
+    }
+
+    /**
+     * Extensions that the field's other settings can't work without
+     */
+    private function getRequiredExtensions(): array
+    {
+        return filled($this->getAdvancedSearchOptions()) && $this->isSearchEnabled() ? ['searchbox'] : [];
     }
 
     public function getBasePath(): string
@@ -398,6 +406,10 @@ class AceEditor extends Field
 
         if (isset($snippetOptions['enable'])) {
             $editorOptions['enableSnippets'] = (bool) $snippetOptions['enable'];
+        }
+
+        if (($this->getAdvancedSearchOptions()['highlightAllMatches'] ?? true) === false) {
+            $editorOptions['highlightSelectedWord'] = false;
         }
 
         if ($this->isReducedMotionEnabled()) {
@@ -457,19 +469,14 @@ class AceEditor extends Field
 
     public function getToolbarButtons(): array
     {
-        $evaluatedButtons = $this->evaluate($this->toolbarButtons);
-
-        // Empty toolbar = return empty array
-        if ($evaluatedButtons === []) {
-            return [];
-        }
-
         // No toolbar set = use default buttons
-        if ($this->toolbarButtons === null) {
-            return static::DEFAULT_TOOLBAR_BUTTONS;
-        }
+        $buttons = $this->toolbarButtons === null
+            ? static::DEFAULT_TOOLBAR_BUTTONS
+            : (array) $this->evaluate($this->toolbarButtons);
 
-        return (array) $evaluatedButtons;
+        return $this->isSearchEnabled()
+            ? $buttons
+            : array_values(array_diff($buttons, ['find', 'replace']));
     }
     public function enableCustomCompletions(bool|Closure $enable = true): static
     {
@@ -1035,9 +1042,14 @@ class AceEditor extends Field
         return $this;
     }
 
-    private function getAdvancedSearchOptions(): array
+    public function getAdvancedSearchOptions(): array
     {
-        return $this->advancedSearchOptions ?? [];
+        return $this->evaluate($this->advancedSearchOptions) ?? [];
+    }
+
+    public function isSearchEnabled(): bool
+    {
+        return (bool) ($this->getAdvancedSearchOptions()['enable'] ?? true);
     }
 
     // Code lens configuration
