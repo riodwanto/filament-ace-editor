@@ -646,6 +646,8 @@ export default function aceEditorComponent({
          * Load a specific progressive enhancement stage
          */
         async loadProgressiveStage(stageNumber) {
+            // Stage timers keep running after destroy()
+            if (this.isDestroyed) return
             if (stageNumber <= this.progressiveEnhancement.currentStage) return
 
             const stage = this.progressiveEnhancement.stages[stageNumber]
@@ -999,6 +1001,8 @@ export default function aceEditorComponent({
 
                 if (coreOptions.cursorStyle) {
                     setTimeout(() => {
+                        if (this.isDestroyed || !this.editor) return
+
                         const appliedStyle =
                             this.editor.getOption('cursorStyle')
 
