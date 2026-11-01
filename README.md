@@ -15,7 +15,8 @@ Ace Editor implementation for Filament Form.
 
 | Package Version | Filament Version | Status |
 |:---------------:|:----------------:|:--------:|
-| 4.2.x           | 3.3+ and 4.x     | Latest ✨ |
+| 4.3.x           | 3.3+ and 4.x     | Latest ✨ |
+| 4.2.x           | 3.3+ and 4.x     | Legacy |
 | 4.0.x to 4.1.x  | 4.x              | Legacy |
 | 3.0.x           | 3.x              | Legacy |
 | 1.x             | 3.x              | Legacy |
@@ -34,7 +35,7 @@ If a Filament 4 panel looks broken after installing, with white inputs and small
 ## Upgrading from 1.x or 3.0
 
 ```bash
-composer require riodwanto/filament-ace-editor:^4.2
+composer require riodwanto/filament-ace-editor:^4.3
 php artisan filament:assets
 ```
 
