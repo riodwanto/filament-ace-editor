@@ -49,7 +49,7 @@ export default function aceEditorComponent({
         isDisabled,
         editor: null,
         observer: null,
-        shouldUpdateState: true,
+        isApplyingState: false,
         isDestroyed: false,
         isFullscreen: false,
         loadedScripts: [],
@@ -1023,6 +1023,7 @@ export default function aceEditorComponent({
 
                     ...options,
 
+                    placeholder: placeholder ?? undefined,
                     fontSize: this.currentFontSize,
                     showGutter: options.showGutter !== false,
                     showLineNumbers: options.showLineNumbers !== false,
@@ -1053,7 +1054,7 @@ export default function aceEditorComponent({
 
                 this.applyOverscrollSettings()
 
-                this.editor.session.setValue(this.state || placeholder)
+                this.editor.session.setValue(this.state || '')
 
                 this.applyInitialTheme()
                 this.observeDarkModeChanges()
@@ -1066,33 +1067,38 @@ export default function aceEditorComponent({
                     Alpine.debounce(() => {
                         if (this.isDestroyed || !this.editor) return
 
-                        if (!this.shouldUpdateState) {
-                            this.shouldUpdateState = true
-                            return
-                        }
-
                         if (this.editor.isFocused()) return
 
-                        this.editor.session.setValue(this.state || placeholder)
+                        const value = this.state || ''
+
+                        if (this.editor.getValue() === value) return
+
+                        // Otherwise this comes back as a user edit, and overwrites a newer state
+                        this.isApplyingState = true
+                        this.editor.session.setValue(value)
+                        this.isApplyingState = false
+
+                        this.updateToolbarState(false)
                     }, 100),
                 )
 
-                this.editor.session.on(
-                    'change',
-                    Alpine.debounce(() => {
-                        if (this.isDestroyed || !this.editor) return
+                const syncEditorToState = Alpine.debounce(() => {
+                    if (this.isDestroyed || !this.editor) return
 
-                        const currentValue = this.editor.getValue()
+                    const currentValue = this.editor.getValue()
 
-                        // The state watcher resets this flag, and it only runs when state changes
-                        if (currentValue !== this.state) {
-                            this.state = currentValue
-                            this.shouldUpdateState = false
-                        }
+                    if (currentValue !== this.state) {
+                        this.state = currentValue
+                    }
 
-                        this.updateToolbarState(false)
-                    }, 50), // Optimized: 150ms → 50ms for better responsiveness
-                )
+                    this.updateToolbarState(false)
+                }, 50) // Optimized: 150ms → 50ms for better responsiveness
+
+                this.editor.session.on('change', () => {
+                    if (!this.isApplyingState) {
+                        syncEditorToState()
+                    }
+                })
 
                 // Remove immediate feature loading - these will be loaded progressively
                 // if (this.enableCustomCompletions) {

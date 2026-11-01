@@ -60,6 +60,12 @@ it('leaves escape to vim while fullscreen', function () {
         ->toContain('visualMode');
 });
 
+it('keeps the placeholder out of the document', function () {
+    expect(file_get_contents(dirname(__DIR__) . '/resources/js/components/filament-ace-editor.js'))
+        ->not->toContain('|| placeholder')
+        ->toContain('placeholder: placeholder ?? undefined');
+});
+
 it('sends custom commands and code lenses to the editor', function () use ($fieldView) {
     expect(file_get_contents($fieldView))
         ->toContain('customCommands: @js($getCommands())')
