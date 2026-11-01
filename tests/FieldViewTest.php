@@ -26,6 +26,18 @@ it('enables custom completions when only snippets are added', function () {
     expect($field->isCustomCompletionsEnabled())->toBeTrue();
 });
 
+it('does not ship a global css reset', function () use ($builtCss) {
+    expect(file_get_contents($builtCss))
+        ->not->toContain('button,input,optgroup,select,textarea')
+        ->not->toContain('h1,h2,h3,h4,h5,h6');
+});
+
+it('declares the filament version it supports', function () {
+    $composer = json_decode(file_get_contents(dirname(__DIR__) . '/composer.json'), true);
+
+    expect($composer['require'])->toHaveKey('filament/filament');
+});
+
 it('only calls existing methods in the readme', function () {
     preg_match_all('/->(\w+)\(/', file_get_contents(dirname(__DIR__) . '/README.md'), $calls);
 
