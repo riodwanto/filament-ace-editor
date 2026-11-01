@@ -838,7 +838,7 @@ export default function aceEditorComponent({
          * Load custom completions progressively
          */
         async loadCustomCompletionsEnhanced() {
-            if (this.enableCustomCompletions && this.completions.length > 0) {
+            if (this.enableCustomCompletions) {
                 await this.setupCustomCompletions()
             }
         },
@@ -1607,15 +1607,16 @@ export default function aceEditorComponent({
             }
 
             // Add custom snippets
-            if (this.snippets && this.snippets.length > 0) {
-                Object.keys(this.snippets).forEach((trigger) => {
-                    const snippetContent = this.snippets[trigger]
-                    langTools.addSnippet({
-                        name: trigger,
-                        trigger: trigger,
-                        content: snippetContent,
-                    })
-                })
+            const snippets = Object.entries(this.snippets || {}).map(
+                ([trigger, content]) => ({
+                    name: trigger,
+                    tabTrigger: trigger,
+                    content,
+                }),
+            )
+
+            if (snippets.length > 0) {
+                ace.require('ace/snippets').snippetManager.register(snippets)
             }
         },
 
