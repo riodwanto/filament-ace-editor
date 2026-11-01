@@ -2,6 +2,7 @@
 
 namespace Riodwanto\FilamentAceEditor;
 
+use Filament\Schemas\Schema;
 use Filament\Support\Assets\AlpineComponent;
 use Filament\Support\Assets\Asset;
 use Filament\Support\Assets\Css;
@@ -71,9 +72,12 @@ class FilamentAceEditorServiceProvider extends PackageServiceProvider
 
     protected function getAssets(): array
     {
+        // Filament 3 has no CSS layers or Tailwind 4 theme values, so it gets its own build
+        $stylesheet = class_exists(Schema::class) ? 'filament-ace-editor.css' : 'filament-ace-editor-v3.css';
+
         return [
             AlpineComponent::make('filament-ace-editor', __DIR__ . '/../resources/dist/filament-ace-editor.js'),
-            Css::make('filament-ace-editor', __DIR__ . '/../resources/dist/filament-ace-editor.css'),
+            Css::make('filament-ace-editor', __DIR__ . '/../resources/dist/' . $stylesheet),
             // Css::make('filament-ace-editor', __DIR__ . '/../resources/css/index.css'),
         ];
     }
