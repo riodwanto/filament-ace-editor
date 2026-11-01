@@ -78,9 +78,7 @@ it('can configure accessibility features', function () {
             'toolbar' => 'Editor toolbar'
         ])
         ->accessibilityOptions([
-            // Keyboard and screen reader accessibility are handled by custom JS
-            // not passed as ACE editor options
-            'highContrastMode' => false,
+            'highContrastMode' => true,
             'reducedMotionMode' => false
         ]);
 
@@ -93,135 +91,169 @@ it('can configure accessibility features', function () {
     expect($ariaLabels['gutter'])->toBe('Line numbers panel');
     expect($ariaLabels['toolbar'])->toBe('Editor toolbar');
 
-    $accessibilityOptions = callNonPublic($field, 'getAccessibilityOptions');
-    // These options are no longer passed to ACE editor
-    // as they are handled by custom JavaScript implementation
-    expect($accessibilityOptions['highContrastMode'])->toBeFalse();
-    expect($accessibilityOptions['reducedMotionMode'])->toBeFalse();
+    expect($field->isHighContrastEnabled())->toBeTrue();
+    expect($field->isReducedMotionEnabled())->toBeFalse();
+});
+
+it('removes editor motion in reduced motion mode', function (string $style, string $expected) {
+    $field = AceEditor::make('code')
+        ->container(fieldContainer())
+        ->cursorStyle($style)
+        ->editorOptions(['animatedScroll' => true, 'fadeFoldWidgets' => true])
+        ->accessibilityOptions(['reducedMotionMode' => true]);
+
+    $options = $field->getEditorOptions();
+
+    expect($options['animatedScroll'])->toBeFalse();
+    expect($options['fadeFoldWidgets'])->toBeFalse();
+    expect($options['cursorStyle'])->toBe($expected);
+})->with([
+    ['smooth', 'ace'],
+    ['smooth slim', 'slim'],
+    ['wide', 'wide'],
+]);
+
+it('keeps editor motion without reduced motion mode', function () {
+    $field = AceEditor::make('code')
+        ->container(fieldContainer())
+        ->cursorStyle('smooth')
+        ->editorOptions(['animatedScroll' => true]);
+
+    expect($field->getEditorOptions()['animatedScroll'])->toBeTrue();
+    expect($field->getEditorOptions()['cursorStyle'])->toBe('smooth');
 });
 
 it('can configure advanced search options', function () {
     $field = AceEditor::make('code')
+        ->container(fieldContainer())
+        ->disableExtension('searchbox')
         ->advancedSearch([
-            'enable' => true,
-            'caseSensitive' => false,
-            'wholeWord' => false,
-            'regex' => false,
-            'highlightAllMatches' => true
+            'caseSensitive' => true,
+            'highlightAllMatches' => false
         ]);
 
-    $searchOptions = callNonPublic($field, 'getAdvancedSearchOptions');
-    expect($searchOptions['enable'])->toBeTrue();
-    expect($searchOptions['caseSensitive'])->toBeFalse();
-    expect($searchOptions['wholeWord'])->toBeFalse();
-    expect($searchOptions['regex'])->toBeFalse();
-    expect($searchOptions['highlightAllMatches'])->toBeTrue();
+    expect($field->getAdvancedSearchOptions()['caseSensitive'])->toBeTrue();
+    expect($field->isSearchEnabled())->toBeTrue();
+    expect($field->getEditorOptions()['highlightSelectedWord'])->toBeFalse();
+    expect($field->getEnabledExtensions())->toHaveKey('searchbox');
+    expect($field->getToolbarButtons())->toContain('replace');
+});
+
+it('removes the search buttons when advancedSearch turns search off', function () {
+    $field = AceEditor::make('code')
+        ->toolbarButtons(['undo', 'find', 'replace', 'redo'])
+        ->advancedSearch(fn (): array => ['enable' => false]);
+
+    expect($field->isSearchEnabled())->toBeFalse();
+    expect($field->getToolbarButtons())->toBe(['undo', 'redo']);
+    expect(AceEditor::make('code')->advancedSearch(['enable' => false])->getToolbarButtons())->not->toContain('replace');
+});
+
+it('leaves search alone without advancedSearch', function () {
+    $field = AceEditor::make('code')->container(fieldContainer())->disableExtension('searchbox');
+
+    expect($field->isSearchEnabled())->toBeTrue();
+    expect($field->getEnabledExtensions())->not->toHaveKey('searchbox');
+    expect($field->getEditorOptions())->not->toHaveKey('highlightSelectedWord');
 });
 
 it('can configure code lens options', function () {
-    $field = AceEditor::make('code')
-        ->codeLensOptions([
-            'enable' => true,
-            'showOnLineNumber' => true,
-            'showInScrollbar' => false,
-            'fontSize' => '12px'
-        ]);
+    $lenses = [
+        ['match' => '/^function /', 'title' => 'Run', 'command' => 'run'],
+        ['row' => 0, 'title' => 'Fold all', 'command' => 'foldall'],
+    ];
 
-    $codeLensOptions = callNonPublic($field, 'getCodeLensOptions');
-    expect($codeLensOptions['enable'])->toBeTrue();
-    expect($codeLensOptions['showOnLineNumber'])->toBeTrue();
-    expect($codeLensOptions['showInScrollbar'])->toBeFalse();
-    expect($codeLensOptions['fontSize'])->toBe('12px');
+    $field = AceEditor::make('code')
+        ->codeLensOptions(['fontSize' => '12px', 'lenses' => $lenses]);
+
+    expect($field->isCodeLensEnabled())->toBeTrue();
+    expect($field->getCodeLensOptions()['lenses'])->toBe($lenses);
+    expect($field->getEnabledExtensions())->toHaveKey('code_lens');
 });
+
+it('skips code lens when it is off or has no lenses', function (array $options) {
+    $field = AceEditor::make('code')->codeLensOptions(fn (): array => $options);
+
+    expect($field->isCodeLensEnabled())->toBeFalse();
+    expect($field->getEnabledExtensions())->not->toHaveKey('code_lens');
+})->with([
+    'no lenses' => [['fontSize' => '12px']],
+    'turned off' => [['enable' => false, 'lenses' => [['row' => 0, 'title' => 'Run', 'command' => 'run']]]],
+]);
 
 it('can configure advanced snippets', function () {
     $field = AceEditor::make('code')
+        ->container(fieldContainer())
+        ->addSnippets(['own' => 'own ${1:value}'])
         ->advancedSnippets([
-            'enable' => true,
-            'autoComplete' => true,
-            'showOnTrigger' => true,
+            'autoComplete' => false,
             'customSnippets' => [
                 'php_class' => 'class ${1:name} {\n\t${2:// code}\n}',
-                'php_function' => 'function ${1:name}(${2:args}) {\n\t${3:// code}\n}',
                 'js_arrow' => 'const ${1:name} = (${2:args}) => ${3:// code}'
             ]
         ]);
 
-    $snippets = callNonPublic($field, 'getAdvancedSnippets');
-    expect($snippets['enable'])->toBeTrue();
-    expect($snippets['autoComplete'])->toBeTrue();
-    expect($snippets['showOnTrigger'])->toBeTrue();
-    expect($snippets['customSnippets'])->toHaveCount(3);
-    expect($snippets['customSnippets'])->toHaveKey('php_class');
-    expect($snippets['customSnippets'])->toHaveKey('php_function');
-    expect($snippets['customSnippets'])->toHaveKey('js_arrow');
+    expect($field->getSnippets())->toHaveKeys(['own', 'php_class', 'js_arrow']);
+    expect($field->isCustomCompletionsEnabled())->toBeTrue();
+    expect($field->shouldShowSnippetsInPopup())->toBeFalse();
+    expect($field->getEditorOptions()['enableSnippets'])->toBeTrue();
+});
+
+it('turns snippets off with advancedSnippets', function () {
+    $field = AceEditor::make('code')
+        ->container(fieldContainer())
+        ->advancedSnippets(['enable' => false]);
+
+    expect($field->getEditorOptions()['enableSnippets'])->toBeFalse();
+    expect($field->shouldShowSnippetsInPopup())->toBeFalse();
+});
+
+it('evaluates a closure given to advancedSnippets', function () {
+    $field = AceEditor::make('code')
+        ->container(fieldContainer())
+        ->advancedSnippets(fn (): array => ['customSnippets' => ['closure' => 'value']]);
+
+    expect($field->getSnippets())->toHaveKey('closure');
+    expect($field->shouldShowSnippetsInPopup())->toBeTrue();
 });
 
 it('can configure custom commands with shortcuts', function () {
     $field = AceEditor::make('code')
         ->addCommand('formatCode', [
-            'action' => 'editor.format',
-            'shortcut' => 'Ctrl+Shift+F',
+            'action' => 'beautify',
+            'shortcut' => 'Ctrl+Shift+B',
+            'description' => 'Format the code',
             'category' => 'formatting',
-            'description' => 'Format code using formatter',
             'icon' => 'format-icon'
         ])
-        ->addCommand('toggleComment', [
-            'action' => 'editor.toggleCommentLines',
-            'shortcut' => 'Ctrl+/',
-            'category' => 'editing',
-            'description' => 'Toggle line comments'
+        ->addCommand('save', [
+            'action' => 'wire:save',
+            'shortcut' => ['win' => 'Ctrl+S', 'mac' => 'Cmd+S'],
         ]);
 
-    $commands = callNonPublic($field, 'getCommands');
-    expect($commands)->toHaveCount(2);
+    // There's no command palette or custom toolbar button yet to show the category and icon
+    expect($field->getCommands()['formatCode'])->toBe([
+        'name' => 'formatCode',
+        'action' => 'beautify',
+        'shortcut' => 'Ctrl+Shift+B',
+        'description' => 'Format the code',
+    ]);
 
-    $formatCommand = $commands['formatCode'];
-    expect($formatCommand['action'])->toBe('editor.format');
-    expect($formatCommand['shortcut'])->toBe('Ctrl+Shift+F');
-    expect($formatCommand['category'])->toBe('formatting');
-    expect($formatCommand['description'])->toBe('Format code using formatter');
-    expect($formatCommand['icon'])->toBe('format-icon');
-
-    $toggleCommand = $commands['toggleComment'];
-    expect($toggleCommand['action'])->toBe('editor.toggleCommentLines');
-    expect($toggleCommand['shortcut'])->toBe('Ctrl+/');
-    expect($toggleCommand['category'])->toBe('editing');
-    expect($toggleCommand['description'])->toBe('Toggle line comments');
+    expect($field->getCommands()['save']['shortcut'])->toBe(['win' => 'Ctrl+S', 'mac' => 'Cmd+S']);
 });
 
 it('can register multiple commands at once', function () {
     $field = AceEditor::make('code')
         ->registerCommands([
-            'findNext' => [
-                'action' => 'editor.findNext',
-                'shortcut' => 'F3',
-                'category' => 'search',
-                'description' => 'Find next occurrence'
-            ],
-            'findPrevious' => [
-                'action' => 'editor.findPrevious',
-                'shortcut' => 'Shift+F3',
-                'category' => 'search',
-                'description' => 'Find previous occurrence'
-            ],
-            'gotoLine' => [
-                'action' => 'editor.gotoLine',
-                'shortcut' => 'Ctrl+G',
-                'category' => 'navigation',
-                'description' => 'Go to line number'
-            ]
+            'findNext' => ['action' => 'editor.findNext', 'shortcut' => 'F3'],
+            'findPrevious' => ['action' => 'editor.findPrevious', 'shortcut' => 'Shift+F3'],
+            'comment' => ['action' => 'togglecomment', 'shortcut' => 'Ctrl+Shift+7'],
         ]);
 
-    $commands = callNonPublic($field, 'getCommands');
-    expect($commands)->toHaveCount(3);
-    expect($commands)->toHaveKey('findNext');
-    expect($commands)->toHaveKey('findPrevious');
-    expect($commands)->toHaveKey('gotoLine');
+    $commands = $field->getCommands();
 
-    expect($commands['findNext']['shortcut'])->toBe('F3');
+    expect(array_keys($commands))->toBe(['findNext', 'findPrevious', 'comment']);
     expect($commands['findPrevious']['shortcut'])->toBe('Shift+F3');
-    expect($commands['gotoLine']['shortcut'])->toBe('Ctrl+G');
 });
 
 it('can enable all available extensions', function () {
@@ -239,38 +271,25 @@ it('can enable all available extensions', function () {
 
 it('can configure extension-specific settings', function () {
     $field = AceEditor::make('code')
+        ->container(fieldContainer())
         ->enableExtension('language_tools')
         ->setExtensionConfig('language_tools', [
-            'enableBasicAutocompletion' => true,
-            'enableLiveAutocompletion' => true,
-            'enableSnippets' => true,
-            'autoCompleters' => ['text', 'php', 'javascript'],
-            'snippetText' => 'Use Tab to insert snippet'
+            'enableLiveAutocompletion' => false,
+            'liveAutocompletionDelay' => 200,
         ])
         ->setExtensionConfig('beautify', [
-            'html_beautify' => true,
-            'js_beautify' => true,
-            'css_beautify' => true,
-            'indent_size' => '4',
-            'indent_char' => 'space'
+            'lineBreaksAfterCommasInCurlyBlock' => false,
         ]);
 
-    $configs = callNonPublic($field, 'getExtensionConfigs');
-    expect($configs)->toHaveCount(2);
+    $options = $field->getEditorOptions();
 
-    $languageToolsConfig = $configs['language_tools'];
-    expect($languageToolsConfig['enableBasicAutocompletion'])->toBeTrue();
-    expect($languageToolsConfig['enableLiveAutocompletion'])->toBeTrue();
-    expect($languageToolsConfig['enableSnippets'])->toBeTrue();
-    expect($languageToolsConfig['autoCompleters'])->toBeArray();
-    expect($languageToolsConfig['snippetText'])->toBe('Use Tab to insert snippet');
+    // Config sets enableLiveAutocompletion to true, and the field setting has to win
+    expect($options['enableLiveAutocompletion'])->toBeFalse();
+    expect($options['liveAutocompletionDelay'])->toBe(200);
 
-    $beautifyConfig = $configs['beautify'];
-    expect($beautifyConfig['html_beautify'])->toBeTrue();
-    expect($beautifyConfig['js_beautify'])->toBeTrue();
-    expect($beautifyConfig['css_beautify'])->toBeTrue();
-    expect($beautifyConfig['indent_size'])->toBe('4');
-    expect($beautifyConfig['indent_char'])->toBe('space');
+    // Beautify reads its own options, and Ace would reject this one as an editor option
+    expect($options)->not->toHaveKey('lineBreaksAfterCommasInCurlyBlock');
+    expect($field->getExtensionConfigs()['beautify'])->toBe(['lineBreaksAfterCommasInCurlyBlock' => false]);
 });
 
 it('can combine all enhanced features', function () {
@@ -307,10 +326,7 @@ it('can combine all enhanced features', function () {
             'editor' => 'Advanced code editor with all features',
             'textarea' => 'Accessible code input'
         ])
-        ->accessibilityOptions([
-            // Keyboard and screen reader accessibility are handled by custom JS
-            // not passed as ACE editor options
-        ])
+        ->accessibilityOptions([])
 
         // Advanced features
         ->advancedSearch(['enable' => true, 'highlightAllMatches' => true])
@@ -319,10 +335,9 @@ it('can combine all enhanced features', function () {
 
         // Commands
         ->addCommand('saveAndFormat', [
-            'action' => 'editor.formatAndSave',
+            'action' => 'wire:save',
             'shortcut' => 'Ctrl+S',
-            'category' => 'file',
-            'description' => 'Format and save file'
+            'description' => 'Save the record'
         ]);
 
     // Test all configurations

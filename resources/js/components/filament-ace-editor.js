@@ -22,6 +22,11 @@ export default function aceEditorComponent({
     currentFontSize = '14px',
     currentWordWrap = 'off',
     overscrollOptions = {},
+    beautifyOptions = {},
+    showSnippetsInPopup = true,
+    searchOptions = {},
+    customCommands = {},
+    codeLensOptions = {},
     isDisabled = false,
 }) {
     return {
@@ -218,6 +223,11 @@ export default function aceEditorComponent({
         currentFontSize,
         currentWordWrap,
         overscrollOptions,
+        beautifyOptions,
+        showSnippetsInPopup,
+        searchOptions,
+        customCommands,
+        codeLensOptions,
         async init() {
             if (this.$root.closest('.fi-modal')) {
                 await new Promise((resolve) => setTimeout(resolve, 300))
@@ -888,6 +898,219 @@ export default function aceEditorComponent({
         async loadAdvancedExtensionsProgressive() {
             // Extensions are already loaded during initialization
             // This stage enables advanced features that depend on those extensions
+            if (!this.editor) return
+
+            this.applyBeautifyOptions()
+            this.applySnippetPopupOption()
+            this.applySearchOptions()
+            this.registerCustomCommands()
+            this.initCodeLens()
+        },
+
+        /**
+         * Beautify keeps one set of options per page, so the last editor to load wins
+         */
+        applyBeautifyOptions() {
+            const beautify = ace.require('ace/ext/beautify')
+
+            if (beautify) {
+                Object.assign(beautify.formatOptions, this.beautifyOptions)
+            }
+        },
+
+        /**
+         * Tab still expands a snippet that isn't offered in the popup
+         */
+        applySnippetPopupOption() {
+            const editor = Alpine.raw(this.editor)
+
+            if (this.showSnippetsInPopup || !editor.completers) return
+
+            editor.completers = editor.completers.filter(
+                (completer) => completer.id !== 'snippetCompleter',
+            )
+        },
+
+        applySearchOptions() {
+            if (Object.keys(this.searchOptions).length === 0) return
+
+            const editor = Alpine.raw(this.editor)
+            const {
+                enable = true,
+                caseSensitive = false,
+                wholeWord = false,
+                regex = false,
+                highlightAllMatches = true,
+            } = this.searchOptions
+
+            if (!enable) {
+                // Through the same Alpine proxy that added them, or Ace can't match the key bindings
+                this.editor.commands.removeCommands([
+                    'find',
+                    'findAll',
+                    'findnext',
+                    'findprevious',
+                    'findReplace',
+                    'replace',
+                    'selectOrFindNext',
+                    'selectOrFindPrevious',
+                ])
+
+                return
+            }
+
+            editor.$search.set({ caseSensitive, wholeWord, regExp: regex })
+
+            // Ace builds the search box the first time it opens
+            const setUpSearchBox = () => {
+                const searchBox = editor.searchBox
+
+                if (!searchBox) return
+
+                editor.commands.off('afterExec', setUpSearchBox)
+
+                searchBox.caseSensitiveOption.checked = caseSensitive
+                searchBox.wholeWordOption.checked = wholeWord
+                searchBox.regExpOption.checked = regex
+
+                if (!highlightAllMatches) {
+                    searchBox.highlight = () => {}
+                }
+
+                searchBox.$syncOptions(true)
+            }
+
+            editor.commands.on('afterExec', setUpSearchBox)
+        },
+
+        registerCustomCommands() {
+            Object.values(this.customCommands).forEach((command) => {
+                const exec = this.resolveCommandAction(command.action)
+
+                if (!exec) {
+                    console.warn(
+                        `Ace Editor: command "${command.name}" has an unknown action "${command.action}"`,
+                    )
+
+                    return
+                }
+
+                this.editor.commands.addCommand({
+                    name: command.name,
+                    description: command.description,
+                    bindKey: this.commandBindKey(command.shortcut),
+                    readOnly: command.action.startsWith('wire:'),
+                    exec,
+                })
+            })
+        },
+
+        /**
+         * An action is wire:method, editor.method or the name of an Ace command
+         */
+        resolveCommandAction(action) {
+            if (action?.startsWith('wire:')) {
+                const method = action.slice('wire:'.length)
+
+                return (_editor, args) =>
+                    args?.row === undefined
+                        ? this.$wire.call(method)
+                        : this.$wire.call(method, args.row)
+            }
+
+            if (action?.startsWith('editor.')) {
+                const method = action.slice('editor.'.length)
+
+                return typeof Alpine.raw(this.editor)[method] === 'function'
+                    ? (editor) => editor[method]()
+                    : null
+            }
+
+            // Held by reference, so a command can reuse the name of the one it replaces
+            const target =
+                this.editor.commands.byName[action] ??
+                ace
+                    .require('ace/ext/beautify')
+                    ?.commands.find((command) => command.name === action)
+
+            return target
+                ? (editor, args) => editor.commands.exec(target, editor, args)
+                : null
+        },
+
+        commandBindKey(shortcut) {
+            return typeof shortcut === 'string'
+                ? { win: shortcut, mac: shortcut.replace(/\bctrl\b/i, 'Command') }
+                : shortcut
+        },
+
+        initCodeLens() {
+            const { enable = true, lenses = [], fontSize } = this.codeLensOptions
+            const codeLens = ace.require('ace/ext/code_lens')
+            const rules = lenses.map((lens) => this.toCodeLensRule(lens)).filter(Boolean)
+
+            if (!enable || !codeLens || rules.length === 0) return
+
+            if (fontSize) {
+                this.$root.style.setProperty('--rd-ace-code-lens-size', fontSize)
+            }
+
+            codeLens.registerCodeLensProvider(Alpine.raw(this.editor), {
+                provideCodeLenses: (session, callback) =>
+                    callback(null, this.buildCodeLenses(session, rules)),
+            })
+        },
+
+        /**
+         * Leaves out a lens that could never work, and says why in the console
+         */
+        toCodeLensRule(lens) {
+            const warn = (problem) =>
+                console.warn(`Ace Editor: code lens "${lens.title}" ${problem}`)
+
+            if (!this.editor.commands.byName[lens.command]) {
+                warn(`has an unknown command "${lens.command}"`)
+
+                return null
+            }
+
+            if (lens.match === undefined) {
+                if (Number.isInteger(lens.row)) return lens
+
+                warn('needs a match pattern or a row')
+
+                return null
+            }
+
+            const [, source, flags] =
+                lens.match.match(/^\/(.*)\/([a-z]*)$/s) ?? [null, lens.match, '']
+
+            try {
+                // Without g and y, a pattern keeps no position between lines
+                return { ...lens, pattern: new RegExp(source, flags.replace(/[gy]/g, '')) }
+            } catch (error) {
+                warn(`has an invalid pattern "${lens.match}"`)
+
+                return null
+            }
+        },
+
+        buildCodeLenses(session, rules) {
+            const lines = session.doc.getAllLines()
+            const toLens = ({ command, title }, row) => ({
+                start: { row, column: 0 },
+                command: { id: command, title, arguments: { row } },
+            })
+
+            return rules.flatMap((rule) => {
+                if (!rule.pattern) {
+                    return rule.row < lines.length ? [toLens(rule, rule.row)] : []
+                }
+
+                return lines.flatMap((line, row) =>
+                    rule.pattern.test(line) ? [toLens(rule, row)] : [],
+                )
+            })
         },
 
         /**
@@ -1345,6 +1568,7 @@ export default function aceEditorComponent({
                 // Check cache first
                 const cached = this.getExtensionFromCache(extName)
                 if (cached) {
+                    this.executeCachedScript(cached, extName)
                     this.extensionCache.preloaded.add(extName)
                     return { name: extName, status: 'cached', source: 'localStorage' }
                 }
@@ -1486,6 +1710,11 @@ export default function aceEditorComponent({
          * Execute cached script content
          */
         executeCachedScript(content, extensionName) {
+            // Every editor on the page preloads, but each extension only has to run once
+            if (document.querySelector(`script[data-cached-extension="${extensionName}"]`)) {
+                return
+            }
+
             try {
                 // Create a script element with the cached content
                 const script = document.createElement('script')
@@ -3311,9 +3540,6 @@ export default function aceEditorComponent({
 
                 // Optimize renderer settings
                 if (this.editor.renderer) {
-                    // Enable ACE's optimized scrolling
-                    this.editor.renderer.setAnimatedScroll(true)
-
                     // Optimize font rendering
                     this.editor.renderer.$optimizeFontRendering = true
                 }
@@ -3338,9 +3564,6 @@ export default function aceEditorComponent({
 
                 // Setup performance monitoring
                 this.setupPerformanceMonitoring()
-
-                // Setup graceful degradation
-                this.setupGracefulDegradation()
             } catch (error) {
                 console.warn('Failed to setup reliability improvements:', error)
             }
@@ -3429,47 +3652,6 @@ export default function aceEditorComponent({
                     slowOperations = 0
                 }
             }, 30000) // Every 30 seconds
-        },
-
-        /**
-         * Setup graceful degradation for ACE features
-         */
-        setupGracefulDegradation() {
-            // Feature detection with fallbacks
-            const features = {
-                animatedScroll: () => {
-                    try {
-                        this.editor.setOption('animatedScroll', true)
-                        return this.editor.getOption('animatedScroll')
-                    } catch (error) {
-                        this.editor.setOption('animatedScroll', false)
-                        return false
-                    }
-                },
-
-                liveAutocompletion: () => {
-                    try {
-                        // Test if live autocompletion works
-                        this.editor.setOption('enableLiveAutocompletion', true)
-                        return this.editor.getOption('enableLiveAutocompletion')
-                    } catch (error) {
-                        this.editor.setOption('enableLiveAutocompletion', false)
-                        return false
-                    }
-                },
-            }
-
-            // Test and enable/disable features based on support
-            Object.entries(features).forEach(([featureName, testFeature]) => {
-                try {
-                    testFeature()
-                } catch (error) {
-                    console.warn(
-                        `Feature test failed for ${featureName}:`,
-                        error,
-                    )
-                }
-            })
         },
 
         /**

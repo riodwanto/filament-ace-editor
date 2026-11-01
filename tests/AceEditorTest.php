@@ -346,25 +346,21 @@ describe('Enhanced Font and Display Controls', function () {
     });
 
     it('can configure accessibility options', function () {
-        $field = AceEditor::make('code')->accessibilityOptions([
-            // Keyboard and screen reader accessibility are handled by custom JS
-            // not passed as ACE editor options
-        ]);
+        $field = AceEditor::make('code')->accessibilityOptions(['reducedMotionMode' => true]);
 
-        // These options are no longer passed to ACE editor
-        // as they are handled by custom JavaScript implementation
-        expect(callNonPublic($field, 'getAccessibilityOptions'))->toBe([]);
+        expect($field->isReducedMotionEnabled())->toBeTrue();
+        expect($field->isHighContrastEnabled())->toBeFalse();
     });
 
     it('can configure extension-specific settings', function () {
-        $field = AceEditor::make('code')->setExtensionConfig('language_tools', [
-            'enableBasicAutocompletion' => true,
-            'enableLiveAutocompletion' => true
+        $field = AceEditor::make('code')->container(fieldContainer())->setExtensionConfig('language_tools', [
+            'enableBasicAutocompletion' => false,
+            'enableLiveAutocompletion' => false
         ]);
 
-        $configs = callNonPublic($field, 'getExtensionConfigs');
-        expect($configs['language_tools']['enableBasicAutocompletion'])->toBeTrue();
-        expect($configs['language_tools']['enableLiveAutocompletion'])->toBeTrue();
+        $options = $field->getEditorOptions();
+        expect($options['enableBasicAutocompletion'])->toBeFalse();
+        expect($options['enableLiveAutocompletion'])->toBeFalse();
     });
 
     it('can add custom commands', function () {

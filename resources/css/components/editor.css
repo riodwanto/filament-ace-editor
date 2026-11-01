@@ -19,6 +19,30 @@
     }
 }
 
+.rd-ace-editor.rd-ace-high-contrast {
+    border: 2px solid currentColor;
+
+    &:focus-within {
+        outline: 3px solid currentColor;
+        outline-offset: -3px;
+    }
+
+    :is(.rd-ace-editor-btn, .rd-ace-editor-header-fullscreen, select) {
+        border: 1px solid currentColor;
+    }
+
+    :is(.rd-ace-editor-btn, .rd-ace-editor-header-fullscreen, select):focus-visible {
+        outline: 3px solid currentColor;
+        outline-offset: 1px;
+    }
+}
+
+.rd-ace-reduced-motion,
+.rd-ace-reduced-motion * {
+    transition: none !important;
+    animation: none !important;
+}
+
 .rd-ace-editor-content {
     @apply transition-colors duration-200 bg-white border border-gray-200 dark:bg-gray-900 dark:border-gray-700;
 }

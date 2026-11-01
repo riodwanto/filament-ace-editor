@@ -53,12 +53,19 @@
                 currentFontSize: @js($getFontSize() ?? '14px'),
                 currentWordWrap: @js($wordWrap ?? 'off'),
                 overscrollOptions: @js($getOverscrollOptions()),
+                beautifyOptions: @js($getExtensionConfigs()['beautify'] ?? []),
+                showSnippetsInPopup: @js($shouldShowSnippetsInPopup()),
+                searchOptions: @js($getAdvancedSearchOptions()),
+                customCommands: @js($getCommands()),
+                codeLensOptions: @js($getCodeLensOptions()),
                 isFullscreen: false,
                 isDisabled: @js($isDisabled),
             })" x-ref="aceCodeEditor" @class([
                 'rd-ace-editor rd-ace-transition',
                 'has-error' => $errors->has($statePath),
                 'rd-ace-editor-disabled' => $isDisabled,
+                'rd-ace-high-contrast' => $isHighContrastEnabled(),
+                'rd-ace-reduced-motion' => $isReducedMotionEnabled(),
             ]) role="group"
             aria-labelledby="rd-ace-editor-label-{{ $statePath }}" @if ($errors->has($statePath))
             aria-describedby="rd-ace-editor-error-{{ $statePath }}" @endif @if ($isDisabled) aria-disabled="true" @endif

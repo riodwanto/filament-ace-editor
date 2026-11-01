@@ -360,9 +360,20 @@ class AceEditor extends Field
     public function getEnabledExtensions(): array
     {
         $extensionsUrls = collect(config('filament-ace-editor.extensions'));
-        $enabledExtensionsKeys = $this->extensions->flip();
+        $enabledExtensionsKeys = $this->extensions->merge($this->getRequiredExtensions())->flip();
         $enabledExtensions = $extensionsUrls->intersectByKeys($enabledExtensionsKeys);
         return $enabledExtensions->toArray();
+    }
+
+    /**
+     * Extensions that the field's other settings can't work without
+     */
+    private function getRequiredExtensions(): array
+    {
+        return array_merge(
+            filled($this->getAdvancedSearchOptions()) && $this->isSearchEnabled() ? ['searchbox'] : [],
+            $this->isCodeLensEnabled() ? ['code_lens'] : [],
+        );
     }
 
     public function getBasePath(): string
@@ -392,7 +403,26 @@ class AceEditor extends Field
             $editorOptions['cursorStyle'] = $this->getCursorStyle();
         }
 
-        $editorOptions = array_merge($this->editorOptions, $editorOptions);
+        $editorOptions = array_merge($this->editorOptions, $this->getExtensionEditorOptions(), $editorOptions);
+
+        $snippetOptions = $this->getAdvancedSnippets();
+
+        if (isset($snippetOptions['enable'])) {
+            $editorOptions['enableSnippets'] = (bool) $snippetOptions['enable'];
+        }
+
+        if (($this->getAdvancedSearchOptions()['highlightAllMatches'] ?? true) === false) {
+            $editorOptions['highlightSelectedWord'] = false;
+        }
+
+        if ($this->isReducedMotionEnabled()) {
+            $editorOptions['animatedScroll'] = false;
+            $editorOptions['fadeFoldWidgets'] = false;
+
+            if (isset($editorOptions['cursorStyle'])) {
+                $editorOptions['cursorStyle'] = trim(str_replace('smooth', '', $editorOptions['cursorStyle'])) ?: 'ace';
+            }
+        }
 
         return $editorOptions;
     }
@@ -442,19 +472,14 @@ class AceEditor extends Field
 
     public function getToolbarButtons(): array
     {
-        $evaluatedButtons = $this->evaluate($this->toolbarButtons);
-
-        // Empty toolbar = return empty array
-        if ($evaluatedButtons === []) {
-            return [];
-        }
-
         // No toolbar set = use default buttons
-        if ($this->toolbarButtons === null) {
-            return static::DEFAULT_TOOLBAR_BUTTONS;
-        }
+        $buttons = $this->toolbarButtons === null
+            ? static::DEFAULT_TOOLBAR_BUTTONS
+            : (array) $this->evaluate($this->toolbarButtons);
 
-        return (array) $evaluatedButtons;
+        return $this->isSearchEnabled()
+            ? $buttons
+            : array_values(array_diff($buttons, ['find', 'replace']));
     }
     public function enableCustomCompletions(bool|Closure $enable = true): static
     {
@@ -484,7 +509,7 @@ class AceEditor extends Field
 
     public function getSnippets(): array
     {
-        return $this->snippets;
+        return array_merge($this->getAdvancedSnippets()['customSnippets'] ?? [], $this->snippets);
     }
 
     public function isCustomCompletionsEnabled(): bool
@@ -912,9 +937,17 @@ class AceEditor extends Field
         return $this;
     }
 
-    private function getExtensionConfigs(): array
+    public function getExtensionConfigs(): array
     {
         return $this->extensionConfigs ?? [];
+    }
+
+    /**
+     * Ace reads extension settings as editor options, except beautify, which keeps its own
+     */
+    private function getExtensionEditorOptions(): array
+    {
+        return array_merge(...array_values(array_diff_key($this->getExtensionConfigs(), ['beautify' => true])));
     }
 
     // Command system methods
@@ -924,9 +957,7 @@ class AceEditor extends Field
             'name' => $name,
             'action' => $config['action'] ?? null,
             'shortcut' => $config['shortcut'] ?? null,
-            'category' => $config['category'] ?? 'custom',
             'description' => $config['description'] ?? '',
-            'icon' => $config['icon'] ?? null
         ];
         return $this;
     }
@@ -939,7 +970,7 @@ class AceEditor extends Field
         return $this;
     }
 
-    private function getCommands(): array
+    public function getCommands(): array
     {
         return $this->commands ?? [];
     }
@@ -1012,9 +1043,14 @@ class AceEditor extends Field
         return $this;
     }
 
-    private function getAdvancedSearchOptions(): array
+    public function getAdvancedSearchOptions(): array
     {
-        return $this->advancedSearchOptions ?? [];
+        return $this->evaluate($this->advancedSearchOptions) ?? [];
+    }
+
+    public function isSearchEnabled(): bool
+    {
+        return (bool) ($this->getAdvancedSearchOptions()['enable'] ?? true);
     }
 
     // Code lens configuration
@@ -1024,21 +1060,36 @@ class AceEditor extends Field
         return $this;
     }
 
-    private function getCodeLensOptions(): array
+    public function getCodeLensOptions(): array
     {
-        return $this->codeLensOptions ?? [];
+        return $this->evaluate($this->codeLensOptions) ?? [];
+    }
+
+    public function isCodeLensEnabled(): bool
+    {
+        $options = $this->getCodeLensOptions();
+
+        return ($options['enable'] ?? true) && filled($options['lenses'] ?? []);
     }
 
     // Advanced snippets system
     public function advancedSnippets(array|Closure $snippets): static
     {
         $this->advancedSnippets = $snippets;
+        $this->enableCustomCompletions = true;
         return $this;
     }
 
-    private function getAdvancedSnippets(): array
+    public function getAdvancedSnippets(): array
     {
-        return $this->advancedSnippets ?? [];
+        return $this->evaluate($this->advancedSnippets) ?? [];
+    }
+
+    public function shouldShowSnippetsInPopup(): bool
+    {
+        $options = $this->getAdvancedSnippets();
+
+        return ($options['enable'] ?? true) && ($options['autoComplete'] ?? true);
     }
 
     // Enhanced getter methods for new properties
@@ -1077,9 +1128,19 @@ class AceEditor extends Field
         return $this->evaluate($this->rtlSupport);
     }
 
-    protected function getAccessibilityOptions(): array|null
+    public function getAccessibilityOptions(): array|null
     {
         return $this->evaluate($this->accessibilityOptions);
+    }
+
+    public function isHighContrastEnabled(): bool
+    {
+        return (bool) ($this->getAccessibilityOptions()['highContrastMode'] ?? false);
+    }
+
+    public function isReducedMotionEnabled(): bool
+    {
+        return (bool) ($this->getAccessibilityOptions()['reducedMotionMode'] ?? false);
     }
 
     public function getOverscrollOptions(): array|null

@@ -2,12 +2,28 @@
 
 All notable changes to `filament-ace-editor` will be documented in this file.
 
-## [4.2.1] - Unreleased
+## [4.3.0] - Unreleased
+
+### Added
+
+These methods have existed since 4.1.0, but had no effect until this release.
+
+- **Custom Commands:** `addCommand()` and `registerCommands()` now create commands with keyboard shortcuts, which can call a Livewire method, an editor method or an Ace command
+- **Code Lens:** `codeLensOptions()` now shows links above lines of code that run a command, using a new `lenses` option
+- **Search Options:** `advancedSearch()` now sets the starting search options, and can turn search off
+- **Snippet Options:** `advancedSnippets()` now adds snippets, and can leave them out of the popup or turn them off
+- **Accessibility Options:** `accessibilityOptions()` now applies `highContrastMode` and `reducedMotionMode`
+- **Extension Settings:** `setExtensionConfig()` now passes settings to the editor and to beautify
+
+### Changed
+
+- **Animated Scrolling:** Follow the `animatedScroll` option, which defaults to `false`. The editor used to turn it on regardless, so scrolling is no longer animated by default. Use `editorOptions(['animatedScroll' => true])` to keep it
 
 ### Fixed
 
 - **Keyboard Exit:** Press Escape, then Tab or Shift+Tab, to leave the editor with the keyboard. Tab alone still indents
 - **Fullscreen Layering:** Show the fullscreen editor above the whole panel when a parent uses `position: sticky`, `transform` or `filter`, which let the topbar and sidebar cover it or pushed it off screen. Browsers without the Popover API keep the previous behavior
+- **Cached Extensions:** Run `language_tools`, `searchbox` and `beautify` on repeat visits. Their cached copies were marked as loaded without being run, so `beautify` was missing and `searchbox` loaded late
 
 ## [4.2.0] - 2026-11-01
 
