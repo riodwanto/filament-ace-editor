@@ -3145,8 +3145,7 @@ export default function aceEditorComponent({
                 // Setup ACE-style error boundaries
                 this.setupErrorBoundaries()
 
-                // Setup performance monitoring
-                this.setupPerformanceMonitoring()
+                this.setupCommandErrorHandling()
             } catch (error) {
                 console.warn('Failed to setup reliability improvements:', error)
             }
@@ -3197,44 +3196,21 @@ export default function aceEditorComponent({
         },
 
         /**
-         * Setup performance monitoring with ACE-style metrics
+         * A failing command warns instead of breaking the editor
          */
-        setupPerformanceMonitoring() {
-            // Monitor editor operations
-            let operationCount = 0
-            let slowOperations = 0
-
+        setupCommandErrorHandling() {
             const originalExecCommand = this.editor.execCommand.bind(
                 this.editor,
             )
+
             this.editor.execCommand = (...args) => {
-                const startTime = performance.now()
-                operationCount++
-
                 try {
-                    const result = originalExecCommand(...args)
-                    const duration = performance.now() - startTime
-
-                    if (duration > 100) {
-                        // Operations slower than 100ms
-                        slowOperations++
-                    }
-
-                    return result
+                    return originalExecCommand(...args)
                 } catch (error) {
                     console.warn(`Command execution failed: ${args[0]}`, error)
                     return false
                 }
             }
-
-            // Periodically report performance stats
-            setInterval(() => {
-                if (operationCount > 0) {
-                    // Reset counters
-                    operationCount = 0
-                    slowOperations = 0
-                }
-            }, 30000) // Every 30 seconds
         },
 
         /**
