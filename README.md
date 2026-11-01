@@ -14,7 +14,7 @@ Ace Editor implementation for Filament Form.
 
 | Package Version | Filament Version | Status |
 |:---------------:|:----------------:|:--------:|
-| 4.1.0       | 4.x          | Latest ✨ |
+| 4.1.x       | 4.x          | Latest ✨ |
 | 1.x             | 3.x              | Stable ✅ |
 
 Choose the package version that matches your Filament installation. We recommend using the latest compatible version for the best features and security updates.
