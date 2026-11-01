@@ -48,6 +48,11 @@
     color: #a1a1aa;
 }
 
+/* Ace places this tooltip with viewport coordinates, inside a popup that would clip it */
+.ace_tooltip.ace_doc-tooltip {
+    position: fixed;
+}
+
 /* Coffee sticker - Special feature styling */
 .rd-ace-coffee-sticker {
     @apply absolute z-10 no-underline bg-transparent bottom-11 right-5;

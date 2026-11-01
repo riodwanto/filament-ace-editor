@@ -695,6 +695,7 @@ export default function aceEditorComponent({
 
             this.applyBeautifyOptions()
             this.applySnippetPopupOption()
+            this.fixSnippetDocTooltips()
             this.applySearchOptions()
             this.registerCustomCommands()
             this.initCodeLens()
@@ -722,6 +723,24 @@ export default function aceEditorComponent({
             editor.completers = editor.completers.filter(
                 (completer) => completer.id !== 'snippetCompleter',
             )
+        },
+
+        /**
+         * Ace prints a bare tab stop such as $0 as "undefined" in a snippet's doc tooltip
+         */
+        fixSnippetDocTooltips() {
+            const snippetCompleter = ace.require('ace/ext/language_tools')?.snippetCompleter
+
+            if (!snippetCompleter || snippetCompleter.hasBareTabStopFix) return
+
+            const getDocTooltip = snippetCompleter.getDocTooltip
+
+            snippetCompleter.getDocTooltip = function (item) {
+                item.snippet = item.snippet?.replace(/(?<!\\)\$(\d+)/g, '${$1}')
+
+                return getDocTooltip.call(this, item)
+            }
+            snippetCompleter.hasBareTabStopFix = true
         },
 
         applySearchOptions() {
