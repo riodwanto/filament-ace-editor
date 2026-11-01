@@ -1052,8 +1052,12 @@ export default function aceEditorComponent({
                         if (this.isDestroyed || !this.editor) return
 
                         const currentValue = this.editor.getValue()
-                        this.state = currentValue
-                        this.shouldUpdateState = false
+
+                        // The state watcher resets this flag, and it only runs when state changes
+                        if (currentValue !== this.state) {
+                            this.state = currentValue
+                            this.shouldUpdateState = false
+                        }
 
                         this.updateToolbarState(false)
                     }, 50), // Optimized: 150ms → 50ms for better responsiveness
