@@ -9,14 +9,14 @@ Ace Editor implementation for Filament Form.
 
 - PHP 8.2+
 - Laravel 11.28+
-- Filament 3.3+ or 4.x
+- Filament 3.3+, 4.x or 5.x
 
 ## Version Compatibility
 
 | Package Version | Filament Version | Status |
 |:---------------:|:----------------:|:--------:|
-| 4.3.x           | 3.3+ and 4.x     | Latest ✨ |
-| 4.2.x           | 3.3+ and 4.x     | Legacy |
+| 4.4.x           | 3.3+, 4.x and 5.x | Latest ✨ |
+| 4.2.x to 4.3.x  | 3.3+ and 4.x     | Legacy |
 | 4.0.x to 4.1.x  | 4.x              | Legacy |
 | 3.0.x           | 3.x              | Legacy |
 | 1.x             | 3.x              | Legacy |
@@ -28,14 +28,14 @@ composer require riodwanto/filament-ace-editor
 php artisan filament:assets
 ```
 
-The same release works on Filament 3.3+ and Filament 4, and loads the right stylesheet for your panel. On Filament 3 older than 3.3, use `composer require riodwanto/filament-ace-editor:^1.1`.
+The same release works on Filament 3.3+, 4 and 5, and loads the right stylesheet for your panel. On Filament 3 older than 3.3, use `composer require riodwanto/filament-ace-editor:^1.1`.
 
 If a Filament 4 panel looks broken after installing, with white inputs and small headings, check for `^3.0` in your `composer.json`. That version is built for Filament 3 and its styles override the panel theme. The upgrade commands below replace it.
 
 ## Upgrading from 1.x or 3.0
 
 ```bash
-composer require riodwanto/filament-ace-editor:^4.3
+composer require riodwanto/filament-ace-editor:^4.4
 php artisan filament:assets
 ```
 
@@ -136,6 +136,10 @@ AceEditor::make('code')
 Use `ace/keyboard/emacs`, `ace/keyboard/sublime` or `ace/keyboard/vscode` for the others. To let each user choose, pass the option only when their saved preference asks for it.
 
 In fullscreen, Escape leaves Vim's insert mode, visual mode or search prompt first. From normal mode, it exits fullscreen.
+
+##### Large documents
+
+Filament 5 uses Livewire 4, which rejects requests over 1MB by default, so a larger document can't be saved. To allow more, run `php artisan livewire:config` and raise `payload.max_size` in `config/livewire.php`.
 
 ##### Custom completions and snippets
 

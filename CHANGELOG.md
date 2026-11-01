@@ -2,6 +2,21 @@
 
 All notable changes to `filament-ace-editor` will be documented in this file.
 
+## [4.4.0] - Unreleased
+
+### Added
+
+- **Filament 5 Support:** Run on Filament 5 and Laravel 13, from the same package. Filament 5 panels use the same stylesheet as Filament 4. Livewire 4 rejects requests over 1MB by default, so the README explains how to allow larger documents
+
+### Changed
+
+- **Placeholder:** Show `placeholder()` as a real placeholder, which disappears when you type. It used to be inserted into the document as text
+
+### Fixed
+
+- **External Value Updates:** Keep the newest value when updates arrive close together. A value set from the server within about 150ms of typing or of another update could be dropped, and the old value came back
+- **Empty Fields:** Stop saving the placeholder as the field's value when the field is cleared
+
 ## [4.3.1] - 2026-11-01
 
 ### Fixed
