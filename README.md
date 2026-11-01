@@ -124,6 +124,19 @@ All default values can be found in the [Configuration section](#config) below.
 
 Tab indents inside the editor. To leave it with the keyboard, press Escape, then Tab or Shift+Tab. If Escape closes the autocompletion popup or ends a snippet or multiple cursors, press it once more first. A read-only editor doesn't indent, so Tab leaves it right away.
 
+##### Vim and other keybindings
+
+Turn on Vim keybindings with an editor option:
+
+```php
+AceEditor::make('code')
+    ->editorOptions(['keyboardHandler' => 'ace/keyboard/vim']);
+```
+
+Use `ace/keyboard/emacs`, `ace/keyboard/sublime` or `ace/keyboard/vscode` for the others. To let each user choose, pass the option only when their saved preference asks for it.
+
+In fullscreen, Escape leaves Vim's insert mode, visual mode or search prompt first. From normal mode, it exits fullscreen.
+
 ##### Custom completions and snippets
 
 Ace already suggests keywords and snippets for the selected language. Use `addCompletions()` and `addSnippets()` for suggestions only your app knows about, such as the variables in a template:
