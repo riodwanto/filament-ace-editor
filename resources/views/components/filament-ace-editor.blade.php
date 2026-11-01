@@ -90,7 +90,7 @@
                 <div class="rd-ace-editor-toolbar-group" role="group" aria-label="Editor actions">
                     <template x-for="button in toolbarButtons" :key="button">
                         <button type="button" @click="!isDisabled && executeToolbarAction(button, $event)"
-                            x-tooltip="{ content: getButtonTitle(button), theme: $store.theme }"
+                            x-tooltip="{ content: getButtonTitle(button), theme: $store.theme, appendTo: () => isFullscreen ? $root : document.body }"
                             :class="`rd-ace-editor-btn rd-ace-btn-${button} rd-ace-variant-ghost rd-ace-size-sm ${getButtonActiveState(button) ? 'rd-ace-btn-active' : ''} rd-ace-focus-ring`"
                             :disabled="getButtonDisabled(button) || isDisabled" :aria-label="getButtonTitle(button)"
                             :data-button="button">
