@@ -2,6 +2,17 @@
 
 All notable changes to `filament-ace-editor` will be documented in this file.
 
+## [4.2.0] - 2026-11-01
+
+### Added
+
+- **Filament 3 Support:** Run on Filament 3.3 and newer as well as Filament 4, from one package. Filament 3 panels load their own stylesheet, and `composer require` installs this release on either major
+
+### Changed
+
+- **Public Getters:** Make `getMode()`, `getTheme()` and `getBasePath()` public again, as they were in 1.x and 3.0
+- **Installation Docs:** Use one install command for both Filament majors, and add upgrade notes for 1.x and 3.0
+
 ## [4.1.3] - 2026-11-01
 
 ### Fixed
