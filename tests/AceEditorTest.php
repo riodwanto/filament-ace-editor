@@ -346,14 +346,10 @@ describe('Enhanced Font and Display Controls', function () {
     });
 
     it('can configure accessibility options', function () {
-        $field = AceEditor::make('code')->accessibilityOptions([
-            // Keyboard and screen reader accessibility are handled by custom JS
-            // not passed as ACE editor options
-        ]);
+        $field = AceEditor::make('code')->accessibilityOptions(['reducedMotionMode' => true]);
 
-        // These options are no longer passed to ACE editor
-        // as they are handled by custom JavaScript implementation
-        expect(callNonPublic($field, 'getAccessibilityOptions'))->toBe([]);
+        expect($field->isReducedMotionEnabled())->toBeTrue();
+        expect($field->isHighContrastEnabled())->toBeFalse();
     });
 
     it('can configure extension-specific settings', function () {

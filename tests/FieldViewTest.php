@@ -36,6 +36,14 @@ it('keeps the fullscreen editor and its tooltips in the top layer', function () 
     }
 });
 
+it('ships the accessibility option classes', function () use ($fieldView, $builtCss, $builtCssV3) {
+    foreach (['rd-ace-high-contrast', 'rd-ace-reduced-motion'] as $class) {
+        expect(file_get_contents($fieldView))->toContain("'{$class}'");
+        expect(file_get_contents($builtCss))->toContain(".{$class}");
+        expect(file_get_contents($builtCssV3))->toContain(".{$class}");
+    }
+});
+
 it('enables custom completions when only snippets are added', function () {
     $field = AceEditor::make('code')->addSnippets(['pgfn' => 'function $1() {}']);
 

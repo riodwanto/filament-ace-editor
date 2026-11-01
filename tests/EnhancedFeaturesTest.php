@@ -78,9 +78,7 @@ it('can configure accessibility features', function () {
             'toolbar' => 'Editor toolbar'
         ])
         ->accessibilityOptions([
-            // Keyboard and screen reader accessibility are handled by custom JS
-            // not passed as ACE editor options
-            'highContrastMode' => false,
+            'highContrastMode' => true,
             'reducedMotionMode' => false
         ]);
 
@@ -93,11 +91,36 @@ it('can configure accessibility features', function () {
     expect($ariaLabels['gutter'])->toBe('Line numbers panel');
     expect($ariaLabels['toolbar'])->toBe('Editor toolbar');
 
-    $accessibilityOptions = callNonPublic($field, 'getAccessibilityOptions');
-    // These options are no longer passed to ACE editor
-    // as they are handled by custom JavaScript implementation
-    expect($accessibilityOptions['highContrastMode'])->toBeFalse();
-    expect($accessibilityOptions['reducedMotionMode'])->toBeFalse();
+    expect($field->isHighContrastEnabled())->toBeTrue();
+    expect($field->isReducedMotionEnabled())->toBeFalse();
+});
+
+it('removes editor motion in reduced motion mode', function (string $style, string $expected) {
+    $field = AceEditor::make('code')
+        ->container(fieldContainer())
+        ->cursorStyle($style)
+        ->editorOptions(['animatedScroll' => true, 'fadeFoldWidgets' => true])
+        ->accessibilityOptions(['reducedMotionMode' => true]);
+
+    $options = $field->getEditorOptions();
+
+    expect($options['animatedScroll'])->toBeFalse();
+    expect($options['fadeFoldWidgets'])->toBeFalse();
+    expect($options['cursorStyle'])->toBe($expected);
+})->with([
+    ['smooth', 'ace'],
+    ['smooth slim', 'slim'],
+    ['wide', 'wide'],
+]);
+
+it('keeps editor motion without reduced motion mode', function () {
+    $field = AceEditor::make('code')
+        ->container(fieldContainer())
+        ->cursorStyle('smooth')
+        ->editorOptions(['animatedScroll' => true]);
+
+    expect($field->getEditorOptions()['animatedScroll'])->toBeTrue();
+    expect($field->getEditorOptions()['cursorStyle'])->toBe('smooth');
 });
 
 it('can configure advanced search options', function () {
@@ -307,10 +330,7 @@ it('can combine all enhanced features', function () {
             'editor' => 'Advanced code editor with all features',
             'textarea' => 'Accessible code input'
         ])
-        ->accessibilityOptions([
-            // Keyboard and screen reader accessibility are handled by custom JS
-            // not passed as ACE editor options
-        ])
+        ->accessibilityOptions([])
 
         // Advanced features
         ->advancedSearch(['enable' => true, 'highlightAllMatches' => true])

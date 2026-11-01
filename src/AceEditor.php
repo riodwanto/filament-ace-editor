@@ -400,6 +400,15 @@ class AceEditor extends Field
             $editorOptions['enableSnippets'] = (bool) $snippetOptions['enable'];
         }
 
+        if ($this->isReducedMotionEnabled()) {
+            $editorOptions['animatedScroll'] = false;
+            $editorOptions['fadeFoldWidgets'] = false;
+
+            if (isset($editorOptions['cursorStyle'])) {
+                $editorOptions['cursorStyle'] = trim(str_replace('smooth', '', $editorOptions['cursorStyle'])) ?: 'ace';
+            }
+        }
+
         return $editorOptions;
     }
 
@@ -1099,9 +1108,19 @@ class AceEditor extends Field
         return $this->evaluate($this->rtlSupport);
     }
 
-    protected function getAccessibilityOptions(): array|null
+    public function getAccessibilityOptions(): array|null
     {
         return $this->evaluate($this->accessibilityOptions);
+    }
+
+    public function isHighContrastEnabled(): bool
+    {
+        return (bool) ($this->getAccessibilityOptions()['highContrastMode'] ?? false);
+    }
+
+    public function isReducedMotionEnabled(): bool
+    {
+        return (bool) ($this->getAccessibilityOptions()['reducedMotionMode'] ?? false);
     }
 
     public function getOverscrollOptions(): array|null
