@@ -32,12 +32,13 @@ The package will automatically detect your Filament version and install the comp
 ## Usage
 
 ```php
+use Filament\Schemas\Schema;
 use Riodwanto\FilamentAceEditor\AceEditor;
 
-public function form(Form $form): Form
+public static function form(Schema $schema): Schema
 {
-    return $form
-        ->schema([
+    return $schema
+        ->components([
             ...
             AceEditor::make('code_editor')
                 ->label('Code Editor')
@@ -46,16 +47,10 @@ public function form(Form $form): Form
                 ->darkTheme('dracula')
                 ->fontSize('14px')
                 ->cursorStyle('smooth')
-                ->softWrap('free')
+                ->softWrapMode('free')
                 ->tabSize(4)
                 ->useSoftTabs(true)
-                ->addExtensions(['language_tools', 'beautify'])
-                ->customCompletions([
-                    'php' => [
-                        ['caption' => 'dd()', 'value' => 'dd(${1:variable});', 'meta' => 'Laravel debug helper'],
-                        ['caption' => 'collect()', 'value' => 'collect(${1:array});', 'meta' => 'Laravel collection'],
-                    ]
-                ]),
+                ->addExtensions(['language_tools', 'beautify']),
         ]);
 }
 ```
@@ -75,14 +70,34 @@ public function form(Form $form): Form
 | headerTitle| Editor tittle                                            |
 | fontSize         | Set font size using string (px, rem, em) or integer                                                           |
 | cursorStyle      | Set cursor style: ace, slim, smooth, wide, smooth-slim                                                         |
-| softWrap         | Control text wrapping behavior: off, free, printMargin, textWidth                                             |
+| softWrapMode     | Control text wrapping behavior: off, free, printMargin, textWidth                                             |
 | showGutter       | Show/hide line numbers and breakpoints                                                                         |
 | showPrintMargin  | Show/hide vertical print margin line                                                                          |
 | foldStyle        | Set code folding style: manual, markbegin, markbeginend                                                        |
 | tabSize          | Set tab size for indentation                                                                                   |
 | useSoftTabs      | Use spaces instead of tabs for indentation                                                                     |
+| addCompletions   | Add your own suggestions to the autocompletion popup                                                           |
+| addSnippets      | Add your own snippets, as trigger and content pairs                                                            |
 
 All default values can be found in the [Configuration section](#config) below.
+
+##### Custom completions and snippets
+
+Ace already suggests keywords and snippets for the selected language. Use `addCompletions()` and `addSnippets()` for suggestions only your app knows about, such as the variables in a template:
+
+```php
+AceEditor::make('email_template')
+    ->mode('html')
+    ->addCompletions([
+        ['caption' => 'customer.name', 'value' => '{{ customer.name }}', 'meta' => 'Template variable'],
+        ['caption' => 'order.total', 'value' => '{{ order.total }}', 'meta' => 'Template variable'],
+    ])
+    ->addSnippets([
+        'ifpaid' => "{% if order.paid %}\n\t\$0\n{% endif %}",
+    ]);
+```
+
+The `value` of a completion is inserted as written. Tab stops such as `${1:name}` only work in snippets, which expand when you type the trigger and press Tab.
 
 ## Publishing
 
@@ -118,8 +133,8 @@ return [
         'theme' => 'ace/theme/eclipse',
         'enableBasicAutocompletion' => true,
         'enableLiveAutocompletion' => true,
-        'liveAutocompletionDelay' => 0,
-        'liveAutocompletionThreshold' => 0,
+        'liveAutocompletionDelay' => 500,
+        'liveAutocompletionThreshold' => 3,
         'enableSnippets' => true,
         'enableInlineAutocompletion' => true,
         'showPrintMargin' => true,
