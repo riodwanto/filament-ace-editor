@@ -2,6 +2,12 @@
 
 All notable changes to `filament-ace-editor` will be documented in this file.
 
+## [4.2.1] - Unreleased
+
+### Fixed
+
+- **Keyboard Exit:** Press Escape, then Tab or Shift+Tab, to leave the editor with the keyboard. Tab alone still indents
+
 ## [4.2.0] - 2026-11-01
 
 ### Added

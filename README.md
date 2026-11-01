@@ -112,6 +112,10 @@ public static function form(Form $form): Form
 
 All default values can be found in the [Configuration section](#config) below.
 
+##### Keyboard
+
+Tab indents inside the editor. To leave it with the keyboard, press Escape, then Tab or Shift+Tab. If Escape closes the autocompletion popup or ends a snippet or multiple cursors, press it once more first. A read-only editor doesn't indent, so Tab leaves it right away.
+
 ##### Custom completions and snippets
 
 Ace already suggests keywords and snippets for the selected language. Use `addCompletions()` and `addSnippets()` for suggestions only your app knows about, such as the variables in a template:
