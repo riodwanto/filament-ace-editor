@@ -1586,10 +1586,9 @@ export default function aceEditorComponent({
                 }),
             )
 
-            // Setup custom completions provider
-            const langTools = ace.require('ace/ext/language_tools')
+            const editor = Alpine.raw(this.editor)
 
-            // Add custom completions
+            // Add custom completions, for this editor only
             if (this.completions && this.completions.length > 0) {
                 const self = this
                 const customCompleter = {
@@ -1616,7 +1615,7 @@ export default function aceEditorComponent({
                     },
                 }
 
-                langTools.addCompleter(customCompleter)
+                editor.completers = [...(editor.completers ?? []), customCompleter]
             }
 
             // Add custom snippets
@@ -1629,8 +1628,35 @@ export default function aceEditorComponent({
             )
 
             if (snippets.length > 0) {
-                ace.require('ace/snippets').snippetManager.register(snippets)
+                this.registerEditorSnippets(editor, snippets)
             }
+        },
+
+        /**
+         * Ace only scopes snippets by language, so each editor gets a scope of its own
+         */
+        registerEditorSnippets(editor, snippets) {
+            const { snippetManager } = ace.require('ace/snippets')
+
+            if (!snippetManager.hasEditorScopes) {
+                const getActiveScopes = snippetManager.getActiveScopes
+
+                snippetManager.getActiveScopes = function (activeEditor) {
+                    return [
+                        ...getActiveScopes.call(this, activeEditor),
+                        activeEditor.rdAceSnippetScope,
+                    ].filter(Boolean)
+                }
+                snippetManager.hasEditorScopes = true
+            }
+
+            const scope = `rd-ace:${this.statePath}`
+
+            // A remounted editor keeps its state path, but its snippets can change
+            snippetManager.unregister([...(snippetManager.snippetMap[scope] ?? [])])
+            snippetManager.register(snippets, scope)
+
+            editor.rdAceSnippetScope = scope
         },
 
         // Toolbar Methods
