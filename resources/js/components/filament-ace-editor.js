@@ -4120,6 +4120,8 @@ export default function aceEditorComponent({
         initAccessibility() {
             if (!this.editor) return
 
+            this.initTabExit()
+
             // Initialize keyboard accessibility
             if (this.keyboardAccessibility) {
                 this.initKeyboardAccessibility()
@@ -4134,6 +4136,51 @@ export default function aceEditorComponent({
             if (this.ariaLabels && Object.keys(this.ariaLabels).length > 0) {
                 this.applyAriaLabels()
             }
+        },
+
+        /**
+         * Tab indents inside the editor, so Escape then Tab lets keyboard users leave it
+         */
+        initTabExit() {
+            const editor = this.editor
+            const textInput = editor.textInput.getElement()
+            const container = editor.container
+            let isTabExitArmed = false
+
+            const handler = (e) => {
+                if (e.target !== textInput) return
+                if (['Shift', 'Control', 'Alt', 'Meta'].includes(e.key)) return
+
+                // Stopped before Ace's listener on the text input, so the browser moves focus
+                if (e.key === 'Tab' && isTabExitArmed) {
+                    e.stopPropagation()
+                }
+
+                // Escape that closes a popup, snippet or multi-cursor doesn't arm the exit
+                isTabExitArmed =
+                    e.key === 'Escape' &&
+                    !editor.completer?.activated &&
+                    !editor.tabstopManager &&
+                    !editor.inMultiSelectMode
+            }
+
+            container.addEventListener('keydown', handler, true)
+
+            this.eventListeners.push({
+                element: container,
+                type: 'keydown',
+                handler,
+                options: { capture: true },
+            })
+
+            this.editor.on('blur', () => {
+                isTabExitArmed = false
+            })
+
+            textInput.setAttribute(
+                'aria-description',
+                'Press Escape, then Tab, to leave the editor',
+            )
         },
 
         initKeyboardAccessibility() {
