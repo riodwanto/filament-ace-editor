@@ -57,6 +57,7 @@
                 showSnippetsInPopup: @js($shouldShowSnippetsInPopup()),
                 searchOptions: @js($getAdvancedSearchOptions()),
                 customCommands: @js($getCommands()),
+                codeLensOptions: @js($getCodeLensOptions()),
                 isFullscreen: false,
                 isDisabled: @js($isDisabled),
             })" x-ref="aceCodeEditor" @class([

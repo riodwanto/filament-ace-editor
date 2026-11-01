@@ -44,8 +44,10 @@ it('ships the accessibility option classes', function () use ($fieldView, $built
     }
 });
 
-it('sends custom commands to the editor', function () use ($fieldView) {
-    expect(file_get_contents($fieldView))->toContain('customCommands: @js($getCommands())');
+it('sends custom commands and code lenses to the editor', function () use ($fieldView) {
+    expect(file_get_contents($fieldView))
+        ->toContain('customCommands: @js($getCommands())')
+        ->toContain('codeLensOptions: @js($getCodeLensOptions())');
 });
 
 it('enables custom completions when only snippets are added', function () {

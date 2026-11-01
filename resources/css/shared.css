@@ -33,6 +33,20 @@
     opacity: 1;
 }
 
+/* Ace's own styles load unlayered, so these have to be unlayered to override them */
+.rd-ace-editor {
+    --rd-ace-code-lens-size: 88%;
+}
+
+.rd-ace-editor .ace_codeLens {
+    color: #71717a;
+    font-size: var(--rd-ace-code-lens-size);
+}
+
+.rd-ace-editor .ace_dark .ace_codeLens {
+    color: #a1a1aa;
+}
+
 /* Coffee sticker - Special feature styling */
 .rd-ace-coffee-sticker {
     @apply absolute z-10 no-underline bg-transparent bottom-11 right-5;

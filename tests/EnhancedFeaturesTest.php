@@ -158,20 +158,28 @@ it('leaves search alone without advancedSearch', function () {
 });
 
 it('can configure code lens options', function () {
-    $field = AceEditor::make('code')
-        ->codeLensOptions([
-            'enable' => true,
-            'showOnLineNumber' => true,
-            'showInScrollbar' => false,
-            'fontSize' => '12px'
-        ]);
+    $lenses = [
+        ['match' => '/^function /', 'title' => 'Run', 'command' => 'run'],
+        ['row' => 0, 'title' => 'Fold all', 'command' => 'foldall'],
+    ];
 
-    $codeLensOptions = callNonPublic($field, 'getCodeLensOptions');
-    expect($codeLensOptions['enable'])->toBeTrue();
-    expect($codeLensOptions['showOnLineNumber'])->toBeTrue();
-    expect($codeLensOptions['showInScrollbar'])->toBeFalse();
-    expect($codeLensOptions['fontSize'])->toBe('12px');
+    $field = AceEditor::make('code')
+        ->codeLensOptions(['fontSize' => '12px', 'lenses' => $lenses]);
+
+    expect($field->isCodeLensEnabled())->toBeTrue();
+    expect($field->getCodeLensOptions()['lenses'])->toBe($lenses);
+    expect($field->getEnabledExtensions())->toHaveKey('code_lens');
 });
+
+it('skips code lens when it is off or has no lenses', function (array $options) {
+    $field = AceEditor::make('code')->codeLensOptions(fn (): array => $options);
+
+    expect($field->isCodeLensEnabled())->toBeFalse();
+    expect($field->getEnabledExtensions())->not->toHaveKey('code_lens');
+})->with([
+    'no lenses' => [['fontSize' => '12px']],
+    'turned off' => [['enable' => false, 'lenses' => [['row' => 0, 'title' => 'Run', 'command' => 'run']]]],
+]);
 
 it('can configure advanced snippets', function () {
     $field = AceEditor::make('code')

@@ -370,7 +370,10 @@ class AceEditor extends Field
      */
     private function getRequiredExtensions(): array
     {
-        return filled($this->getAdvancedSearchOptions()) && $this->isSearchEnabled() ? ['searchbox'] : [];
+        return array_merge(
+            filled($this->getAdvancedSearchOptions()) && $this->isSearchEnabled() ? ['searchbox'] : [],
+            $this->isCodeLensEnabled() ? ['code_lens'] : [],
+        );
     }
 
     public function getBasePath(): string
@@ -1057,9 +1060,16 @@ class AceEditor extends Field
         return $this;
     }
 
-    private function getCodeLensOptions(): array
+    public function getCodeLensOptions(): array
     {
-        return $this->codeLensOptions ?? [];
+        return $this->evaluate($this->codeLensOptions) ?? [];
+    }
+
+    public function isCodeLensEnabled(): bool
+    {
+        $options = $this->getCodeLensOptions();
+
+        return ($options['enable'] ?? true) && filled($options['lenses'] ?? []);
     }
 
     // Advanced snippets system

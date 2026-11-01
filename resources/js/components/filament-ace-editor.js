@@ -26,6 +26,7 @@ export default function aceEditorComponent({
     showSnippetsInPopup = true,
     searchOptions = {},
     customCommands = {},
+    codeLensOptions = {},
     isDisabled = false,
 }) {
     return {
@@ -226,6 +227,7 @@ export default function aceEditorComponent({
         showSnippetsInPopup,
         searchOptions,
         customCommands,
+        codeLensOptions,
         async init() {
             if (this.$root.closest('.fi-modal')) {
                 await new Promise((resolve) => setTimeout(resolve, 300))
@@ -902,6 +904,7 @@ export default function aceEditorComponent({
             this.applySnippetPopupOption()
             this.applySearchOptions()
             this.registerCustomCommands()
+            this.initCodeLens()
         },
 
         /**
@@ -1039,6 +1042,75 @@ export default function aceEditorComponent({
             return typeof shortcut === 'string'
                 ? { win: shortcut, mac: shortcut.replace(/\bctrl\b/i, 'Command') }
                 : shortcut
+        },
+
+        initCodeLens() {
+            const { enable = true, lenses = [], fontSize } = this.codeLensOptions
+            const codeLens = ace.require('ace/ext/code_lens')
+            const rules = lenses.map((lens) => this.toCodeLensRule(lens)).filter(Boolean)
+
+            if (!enable || !codeLens || rules.length === 0) return
+
+            if (fontSize) {
+                this.$root.style.setProperty('--rd-ace-code-lens-size', fontSize)
+            }
+
+            codeLens.registerCodeLensProvider(Alpine.raw(this.editor), {
+                provideCodeLenses: (session, callback) =>
+                    callback(null, this.buildCodeLenses(session, rules)),
+            })
+        },
+
+        /**
+         * Leaves out a lens that could never work, and says why in the console
+         */
+        toCodeLensRule(lens) {
+            const warn = (problem) =>
+                console.warn(`Ace Editor: code lens "${lens.title}" ${problem}`)
+
+            if (!this.editor.commands.byName[lens.command]) {
+                warn(`has an unknown command "${lens.command}"`)
+
+                return null
+            }
+
+            if (lens.match === undefined) {
+                if (Number.isInteger(lens.row)) return lens
+
+                warn('needs a match pattern or a row')
+
+                return null
+            }
+
+            const [, source, flags] =
+                lens.match.match(/^\/(.*)\/([a-z]*)$/s) ?? [null, lens.match, '']
+
+            try {
+                // Without g and y, a pattern keeps no position between lines
+                return { ...lens, pattern: new RegExp(source, flags.replace(/[gy]/g, '')) }
+            } catch (error) {
+                warn(`has an invalid pattern "${lens.match}"`)
+
+                return null
+            }
+        },
+
+        buildCodeLenses(session, rules) {
+            const lines = session.doc.getAllLines()
+            const toLens = ({ command, title }, row) => ({
+                start: { row, column: 0 },
+                command: { id: command, title, arguments: { row } },
+            })
+
+            return rules.flatMap((rule) => {
+                if (!rule.pattern) {
+                    return rule.row < lines.length ? [toLens(rule, rule.row)] : []
+                }
+
+                return lines.flatMap((line, row) =>
+                    rule.pattern.test(line) ? [toLens(rule, row)] : [],
+                )
+            })
         },
 
         /**
